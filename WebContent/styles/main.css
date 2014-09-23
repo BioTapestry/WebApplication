@@ -1,0 +1,635 @@
+/*
+**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**                            Seattle, Washington, USA. 
+**
+**    This library is free software; you can redistribute it and/or
+**    modify it under the terms of the GNU Lesser General Public
+**    License as published by the Free Software Foundation; either
+**    version 2.1 of the License, or (at your option) any later version.
+**
+**    This library is distributed in the hope that it will be useful,
+**    but WITHOUT ANY WARRANTY; without even the implied warranty of
+**    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+**    Lesser General Public License for more details.
+**
+**    You should have received a copy of the GNU Lesser General Public
+**    License along with this library; if not, write to the Free Software
+**    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
+/* In-house CSS for themeing the application in a broad sense. */
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    padding: 0;
+}
+
+/* For when we can't load the webpage */
+#error {
+	height: 400px;
+	width: 700px;
+	min-width: 400px;
+	padding: 20px;
+	border: 2px solid #883322;
+	border-radius: 8px;
+	-moz-border-radius: 8px;
+	-webkit-border-radius: 8px;	
+	background-color: #FFFFFF;
+	padding: 15px;
+	margin: 0px;
+	font-size: 16pt;
+}
+
+/* Loading Overlay CSS */
+
+.pageOverlay {
+    top: 0;
+    left: 0;
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    z-index: 1001;
+    display: block;
+}
+
+#CanvasLoading {
+	position: absolute;
+	z-index: 1001;
+	display: block;
+	font-family: "Footlight MT Light",Verdana,sans serif;
+	background-color: #C4C4CF;
+	font-size: 30px;
+	color: black;
+}
+
+#CanvasLoading p {
+	padding: 20px;
+}
+ 
+/* The main application loading overlay */
+#loadingOverlay {
+    background:  #fff url('../images/BioTapestrySplash_border.gif') no-repeat 50% 50%;
+}
+
+/* Loading overlays for extra windows (eg. Perturbation window, Experiment Data window,Pathing) */
+#perturbLoadingOverlay,#expDataLoadingOverlay,#pathingLoadingOverlay {
+    background:  #fff url('../images/BioTapestry_dataview_splash.png') no-repeat 50% 50%;
+}
+
+/* The drag-selection rubberband box */
+#selexBox {
+	display: none;
+	position: absolute;
+	z-index: 5000;
+	border: 2px solid orange;
+	background-color: #d7a274;
+	opacity: 0.4;
+	filter: alpha(opacity=40);
+	width: 0;
+	height: 0;	
+	top: 0;
+	left: 0;
+	padding: 0;
+	margin: 0;
+}
+
+
+/* The placeholder drawing canvas class */
+#placeHolder {
+	display: none;
+	position: absolute;
+	top: 0;
+	left: 0;
+	height: 50px;
+	width: 100px;
+	z-index: 5001;
+}
+
+#main_loader {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	margin-top: 115px;
+	margin-left: -220px;
+}
+
+#perturb_loader,#expdata_loader,#pathing_loader {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	margin-top: 50px;
+	margin-left: -205px;
+}
+
+
+/* Layout Pane CSS */
+
+/* Application Container */
+#app_container, #perturb_container, #expdata_container,#pathing_container {
+	height: 100%;
+	width: 100%;
+}
+
+/* Footer */
+#footer_pane {
+	overflow: auto;
+	font-family: Verdana,Helevetica,Myriad Pro,sans serif;
+    font-size: 10pt;
+    padding-left: 20px;
+    padding-right: 20px;
+	border-radius: 8px;
+	border-width: 2px;
+	border-style: solid;
+	border-color: #4b5a8a;
+	-moz-border-radius: 8px;
+	-webkit-border-radius: 8px;	    
+}
+
+#footerlabel {
+	font-family: Verdana,Helevetica,Myriad Pro,sans serif;
+	font-size: 10pt;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+#footer_wrapper {
+	height: 50px;
+}
+
+/* Top Container */
+#top_pane {
+	padding: 0px;
+	margin: 0px;
+	border: 0px;
+	overflow: hidden;
+	background-color: #FFFFFF !important;
+}
+
+/* Header */
+#header_pane {
+	border: 2px solid #4b5a8a;
+	border-radius: 8px;
+	-moz-border-radius: 8px;
+	-webkit-border-radius: 8px;	
+	background-color: #FFFFFF !important;
+	height: 40px;
+	line-height: 40px;
+	background: url(../images/BioTapestryToolbarBg.png) no-repeat right center;
+	overflow: hidden;
+}
+
+#header_pane span {
+	display: inline-block;
+	vertical-align: middle;
+	line-height: normal;
+	margin-left: 10px;
+	font-size: 1.5em;
+	font-family: ITC Humana Serif Light,Footlight MT Light,sans serif;
+}
+
+#pathing_header_pane {
+	border: 2px solid #4b5a8a;
+	border-radius: 8px;
+	-moz-border-radius: 8px;
+	-webkit-border-radius: 8px;	
+	background-color: #FFFFFF !important;
+	font-family: Verdana,Helevetica,Myriad Pro,sans serif;
+	font-size: 10pt;
+	padding-left: 20px;
+	padding-right: 20px;
+}
+
+/* TimeSlider */
+
+#slider_pane {
+	border-width: 1px 0px 0px 0px;
+	border-style: solid;
+	padding: 0;
+	margin: 0;
+	height: 75px;
+	background-color: #FFFFFF !important;
+}
+
+/* Overlay */
+#annotimg_pane {
+	height: 215px;
+	padding: 0; 
+	margin: 0;
+	background-color: #FFFFFF !important;
+	border-width: 1px 0px 0px 0px;
+	border-style: solid;
+}
+
+
+#intensity_slider_pane {
+	border: 0;
+	padding: 5px 5px 1px 5px;
+	margin: 0;
+	height: 35px;
+	background-color: #FFFFFF !important;	
+}
+
+#overlay_pane {
+	height: 205px;
+	padding: 0; 
+	margin: 0;
+	background-color: #FFFFFF !important;
+	border-width: 1px 0px 1px 0px;
+	border-style: solid;
+}
+
+#overlay_select_pane {
+	padding: 5px 5px 2px 5px;
+}
+
+/* Overlay Modules Checkbox Panes */
+
+#overlay_buttons_pane {
+	padding: 0px 2px 2px 2px;
+}
+
+#modules_pane {
+	padding: 2px 5px 2px 5px;
+}
+
+#module_checkboxes_pane_empty {
+	border: 1px solid black;
+	background-color: #FFFFFF !important;
+	height: 70px;
+	padding: 2px;
+}
+
+.ModuleCheckboxesPane {
+	border: 1px solid black;
+	background-color: #FFFFFF !important;
+	height: 70px;
+	padding: 2px !important;
+}
+
+.ModuleCheckContainer {
+	padding: 0;
+	margin: 0px 0px 2px 0px;
+}
+
+.ModuleCheckLabel {
+	margin-left: 20px;
+	display: block;
+}
+
+/* Overlay component labels */
+
+#intensity_slider_label,#overlay_selection_label {
+	float: left; 
+	margin-right: 15px; 
+	font-weight: bold;	
+}
+
+#overlay_selection_label {
+	padding-top: 3px;
+}
+
+/* Left container */
+#left_wrapper {
+	width: 270px;
+	border: 2px solid #4b5a8a;
+	padding: 0px; 
+	margin: 0px; 
+	overflow: hidden;
+}
+
+#left_lower_wrapper {
+	overflow: hidden;
+	background-color: #FFFFFF; 
+	padding: 0; 
+	margin: 0;
+}
+
+#left_upper_component {
+	background: #FFFFFF;
+	padding: 0px;
+}
+
+/* grnWrapper is where all Canvas events are bound */
+#grnWrapper {
+	overflow: hidden;
+	white-space: nowrap;
+	border: 2px solid #4b5a8a;
+	background-color: #cccccc;
+	padding: 0px;
+	margin: 0px;
+}
+
+/* A container for the canvas element, used in the virtual scrolling system */
+.CanvasContainer {
+	overflow: hidden;
+	border: 0px;
+	float: left;
+	padding: 0px;
+	margin: 0px;
+}
+
+canvas {
+	float: left;
+}
+    	    	
+/* Widget Reskinning/Overrides */
+
+#toolbar_widget {
+	border: 2px solid #343434;
+	border-radius: 8px;
+	-moz-border-radius: 8px;
+	-webkit-border-radius: 8px;
+}
+
+#horizontal_menu_widget  {
+	border-radius: 8px;
+	-moz-border-radius: 8px;
+	-webkit-border-radius: 8px;		
+}
+
+#horizontal_menu_widget .dijitMenuItemHover:first-child,
+#horizontal_menu_widget .dijitMenuItemSelected:first-child {
+	border-radius: 8px 0px 0px 8px;
+	-moz-border-radius: 8px 0px 0px 8px;
+	-webkit-border-radius: 8px 0px 0px 8px;
+}
+
+/* We want our access keys to always show */
+.dijitMenuItemShortcutKey {
+	text-decoration: underline !important;	
+}
+
+.PreserveWhitespace .dijitSelectLabel,
+.PreserveWhitespace .dijitMenuItemLabel,
+.PreserveWhitespace .dijitMenuItem {
+	white-space: pre-wrap;
+}
+
+.BioTapIcon {
+	height: 24px;
+	width: 24px;
+	margin-right: 10px;
+	float: left;
+}
+
+.ModelAnnotImg {
+	display: block;
+	margin: auto;
+}
+
+/* Dialogs and Frames */
+
+.BTCheckBox {
+	float: left;
+	padding-top: 5px !important;
+}
+
+.BTCheckBoxLabel {
+	display: block;
+	margin-left: 20px;
+}
+
+.BTCheckBoxContainer {
+	padding: 0;
+	margin: 0px 0px 5px 0px;
+}
+
+.SelGroupContainer {
+	padding: 10px 0px 15px 0px;
+}
+
+.SelGroupLabel {
+	padding-right: 10px;
+}
+
+.SelGroupRadioContainer {
+	margin: 0px;
+	padding: 2px 0px 0px 15px;
+}
+
+.SelGroupRadioLabel {
+	padding-right: 15px;
+	padding-left: 5px;
+	white-space: nowrap;
+}
+
+.TextMessage {
+	margin-top: 0px;
+}
+
+.FrameDialogContainerPane {
+	border: 0px !important;
+	padding: 0px !important;
+}
+
+.DrawingAreaContainer {
+	overflow: hidden !important;
+	white-space: nowrap;
+	border: 2px solid #4b5a8a !important;
+	padding: 0 !important;
+	margin: 0;
+}
+
+
+
+.FrameDialogElement {
+	margin: 0px;
+	border: 0px; 
+	padding: 5px 0px 5px 0px;	
+}
+
+/* For when we want nonmodal Dialogs */
+.nonModal_underlay {
+    display: none;
+}
+
+/* Make sure labels have some space */
+label.left {
+	margin-right: 10px;
+}
+
+label.right {
+	margin-left: 10px;
+}
+
+.dijitTabPaneWrapper {
+	padding: 5px;
+}
+
+.disabledText {
+	font-size: 25pt;
+	color: black;
+	font-family: Helvetica,Calibri,Verdana,sans serif;
+	text-align: center;
+}
+
+/***********************************************
+ * dgrid overrides
+ ***********************************************/
+
+.dgrid-scroller {
+	height: auto !important;
+}
+
+.PathingGrid.dgrid,.PathingGrid .dgrid-scroller {
+	position: relative !important;
+	overflow-y: auto !important;	
+}
+
+/* If the column headers are hidden, size the scrolling pane appropriately */
+
+.NoHeader>.dgrid-scroller {
+	margin-top: 0px;
+}
+
+/* Option to hide the scroller in non-scrolling situations (useful with NoGridlines) */
+
+.AutoScroller .dgrid-scroller {
+	overflow-y: auto !important;
+}
+
+/* We don't let people decide what columns are visible because we're mean */
+
+.dgrid-hider-toggle {
+	display: none;
+}
+
+/* Hide the gridlines for certain kinds of grids (I realize this means it's technically not a grid) */
+
+.NoGridlines .dgrid-cell {
+	border: 0px !important;
+}
+
+
+/**
+// OSX Lion can be set to autohide scrollbars between scroll uses at the system level.
+// Some browsers ignore this, but Webkit browsers do not. If a user is on a system
+// without a hardware scrolling option, they may lose the ability to scroll the 
+// canvas, because it is a virtually scrolled element. We solve this by checking for
+// Mac + Webkit, and then applying a special CSS class that disables the normal webkit
+// scrollbars (to prevent them from showing up when autohide is disabled, or when they
+// would normally) and then skin our own, which we force to always be visible.
+ */
+
+.osxScroll::-webkit-scrollbar {
+	-webkit-appearance:none;
+}
+.osxScroll::-webkit-scrollbar:vertical {
+    width: 17px;
+}
+.osxScroll::-webkit-scrollbar:horizontal {
+    height: 17px;
+}
+
+.osxScroll::-webkit-scrollbar-thumb {
+    border-radius: 8px;
+    border: 2px solid white; /* should match background, can't be transparent */
+    background-color: rgba(0, 0, 0, .5);
+}
+
+.osxScroll::-webkit-scrollbar-track { 
+	background-color: #EFEFEF;
+}
+
+.bigLoading {
+	font-size: 30px;
+}
+
+.iconContainer {
+	height: 24px;
+	width: 24px;
+	float: left;
+}
+
+.FrameLayoutContainer {
+	border: 0px !important;
+	padding: 10px !important;
+}
+
+.NoWorkspaceCanvas {
+	background-color: #FFFFFF !important;
+}
+
+#pathing_container .dijitSplitter, #pathing_dialog_pathing .dijitSplitter {
+	border: 1px solid black;
+	height: 7px;
+	margin: 5px 0 5px 0;
+	background-color: #c1c1c1;
+}
+
+#pathing_container .dijitSplitterThumb, #pathing_dialog_pathing .dijitSplitterThumb {
+	top: 3px;
+}
+
+.pathing_list_container {
+	height: 150px;
+}
+
+/* Removes all padding from dijit.form.Buttons, making them much smaller */
+
+.MiniButton .dijitButtonNode {
+	padding: 0px !important;
+}
+
+/* Class to apply float right to DOM nodes; useful in aligning buttons */
+
+.RightHand {
+	float:right;
+}
+
+/* Indentation classes */
+
+.LeftIndent {
+	margin: 0px 0px 0px 10px;
+}
+
+/* Skinning to identify which node on the tree was right-clicked to open a context menu */
+
+.dijitTreeContextClick {
+	background-color: #c1c1c1 !important;
+}
+
+.DisablingOverlay {
+	width: 100%; 
+	height: 100%;
+	z-index: 951; 
+	background-color: rgba(0,0,0,0.15); 
+	position: absolute;
+}
+
+/**
+ * Background position overrides to produce a dijit.form.CheckBox which is skinned
+ * like a dijit.form.RadioButton but otherwise behaves exactly like a CheckBox. To
+ * apply this to a CheckBox, add the class selector CheckBoxRadio to the object.
+ *
+ *
+ */
+
+.CheckBoxRadio.dijitCheckBox {
+	background-position: -105px !important;
+}
+.CheckBoxRadio.dijitCheckBoxHover {
+	background-position: -135px !important;
+}
+.CheckBoxRadio.dijitCheckBoxChecked {
+	background-position: -90px !important;
+}
+.CheckBoxRadio.dijitCheckBoxCheckedHover {
+	background-position: -120px !important;
+}
+
+
+/**
+ * This is only needed if we have an element which uses the right-hand edge of
+ * the horizontal menu bar as an edge.
+
+#horizontal_menu_widget .dijitMenuItemHover:last-child,
+#horizontal_menu_widget .dijitMenuItemSelected:last-child {
+	border-radius: 0px 8px 8px 0px;
+	-moz-border-radius: 0px 8px 8px 0px;
+	-webkit-border-radius: 0px 8px 8px 0px;
+}
+
+*/

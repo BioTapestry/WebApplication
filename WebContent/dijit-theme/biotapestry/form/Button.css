@@ -1,0 +1,180 @@
+/* Button | DropDownButton | ComboButton | ToggleButton
+ * 
+ * Styling Buttons mainly includes:
+ * 
+ * 1. Containers
+ * 		.dijitButton
+ * 		.dijitDropDownButton
+ * 		.dijitComboButton
+ * 		.dijitButtonNode - common button/arrow wrapper shared across all three button types 
+ *
+ * 2. Button text
+ * 		.dijitButtonText
+ * 
+ * 3. Arrows - only for DropDownButton and ComboButton
+ * 	     There are total four directions arrows - down, left, right, up:
+ * 		.dijitArrowButtonInner - down arrow by default
+ *      .dijitLeftArrowButton .dijitArrowButtonInner - left arrow
+ *      .dijitRightArrowButton .dijitArrowButtonInner - right arrow
+ *      .dijitUpArrowButton .dijitArrowButtonInner - up arrow
+ * 
+ * 4. States - Hover, Active, Disabled, e.g.
+ * 		.dijitButtonHover .dijitButtonNode
+ * 		.dijitButtonActive .dijitButtonNode
+ * 		.dijitButtonDisabled .dijitButtonNode
+ *      
+ *      .dijitDisabled .dijitArrowButtonInner  - disabled arrow states 
+ */
+.biotapestry .dijitButtonNode {
+  /* rules for dijit.form.*Button widgets and arrow nodes on ComboBox, Spinner etc. */
+
+  -webkit-transition-property: background-color;
+  -moz-transition-property: background-color;
+  transition-property: background-color;
+  -webkit-transition-duration: 0.3s;
+  -moz-transition-duration: 0.3s;
+  transition-duration: 0.3s;
+}
+.biotapestry .dijitButton .dijitButtonNode,
+.biotapestry .dijitDropDownButton .dijitButtonNode,
+.biotapestry .dijitComboButton .dijitButtonNode,
+.biotapestry .dijitToggleButton .dijitButtonNode {
+  /* rules for the dijit.form.*Button widgets (see also ComboButton section below) */
+
+  border: 1px solid #4e4e4e;
+  padding: 2px 4px 4px 4px;
+  color: #000000;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  -webkit-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  -moz-box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.15);
+  background-color: #8c9fbd;
+  background-image: url("images/buttonEnabled.png");
+  background-repeat: repeat-x;
+  background-image: -moz-linear-gradient(#ffffff 0px, rgba(255, 255, 255, 0) 3px, rgba(255, 255, 255, 0.75) 100%);
+  background-image: -webkit-linear-gradient(#ffffff 0px, rgba(255, 255, 255, 0) 3px, rgba(255, 255, 255, 0.75) 100%);
+  background-image: -o-linear-gradient(#ffffff 0px, rgba(255, 255, 255, 0) 3px, rgba(255, 255, 255, 0.75) 100%);
+  background-image: linear-gradient(#ffffff 0px, rgba(255, 255, 255, 0) 3px, rgba(255, 255, 255, 0.75) 100%);
+  _background-image: none;
+}
+.biotapestry .dijitComboButton .dijitArrowButton {
+  border-left-width: 0;
+  padding: 4px 2px 4px 2px;
+  /* TODO: still needed? */
+
+}
+/*arrow styles for down/up/left/right directions*/
+.biotapestry .dijitArrowButtonInner {
+  width: 15px;
+  height: 15px;
+  margin: 0 auto;
+  background-image: url("../form/images/buttonArrows.png");
+  background-repeat: no-repeat;
+  background-position: -51px 53%;
+}
+.biotapestry .dijitLeftArrowButton .dijitArrowButtonInner {
+  background-position: -77px 53%;
+}
+.biotapestry .dijitRightArrowButton .dijitArrowButtonInner {
+  background-position: -26px 53%;
+}
+.biotapestry .dijitUpArrowButton .dijitArrowButtonInner {
+  background-position: 0 53%;
+}
+.biotapestry .dijitDisabled .dijitArrowButtonInner {
+  background-position: -151px 53%;
+}
+.biotapestry .dijitDisabled .dijitLeftArrowButton .dijitArrowButtonInner {
+  background-position: -177px 53%;
+}
+.biotapestry .dijitDisabled .dijitRightArrowButton .dijitArrowButtonInner {
+  background-position: -126px 53%;
+}
+.biotapestry .dijitDisabled .dijitUpArrowButton .dijitArrowButtonInner {
+  background-position: -100px 53%;
+}
+.biotapestry .dijitButtonText {
+  padding: 0 0.3em;
+  text-align: center;
+}
+/* hover status */
+.biotapestry .dijitButtonHover .dijitButtonNode,
+.biotapestry .dijitDropDownButtonHover .dijitButtonNode,
+.biotapestry .dijitComboButton .dijitButtonNodeHover,
+.biotapestry .dijitComboButton .dijitDownArrowButtonHover,
+.biotapestry .dijitToggleButtonHover .dijitButtonNode {
+  background-color: #47679c;
+  color: #000000;
+  -webkit-transition-duration: 0.2s;
+  -moz-transition-duration: 0.2s;
+  transition-duration: 0.2s;
+}
+/* focus status */
+.biotapestry .dijitButtonFocused .dijitButtonNode,
+.biotapestry .dijitDropDownButtonFocused .dijitButtonNode,
+.biotapestry .dijitComboButton .dijitButtonNodeFocused,
+.biotapestry .dijitComboButton .dijitDownArrowButtonFocused,
+.biotapestry .dijitToggleButtonFocused .dijitButtonNode {
+  background-color: #839cc6;
+  color: #000000;
+  -webkit-transition-duration: 0.2s;
+  -moz-transition-duration: 0.2s;
+  transition-duration: 0.2s;
+}
+/* active, checked status */
+.biotapestry .dijitButtonActive .dijitButtonNode,
+.biotapestry .dijitDropDownButtonActive .dijitButtonNode,
+.biotapestry .dijitComboButtonActive .dijitButtonNode,
+.biotapestry .dijitToggleButtonActive .dijitButtonNode,
+.biotapestry .dijitToggleButtonChecked .dijitButtonNode {
+  background-color: #5e6d85;
+  -webkit-box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.2);
+  -moz-box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0px 1px 1px rgba(0, 0, 0, 0.2);
+  -webkit-transition-duration: 0.1s;
+  -moz-transition-duration: 0.1s;
+  transition-duration: 0.1s;
+}
+/* disabled status */
+.biotapestry .dijitButtonDisabled,
+.biotapestry .dijitDropDownButtonDisabled,
+.biotapestry .dijitComboButtonDisabled,
+.biotapestry .dijitToggleButtonDisabled {
+  background-image: none;
+  outline: none;
+}
+.biotapestry .dijitButtonDisabled .dijitButtonNode,
+.biotapestry .dijitDropDownButtonDisabled .dijitButtonNode,
+.biotapestry .dijitComboButtonDisabled .dijitButtonNode,
+.biotapestry .dijitToggleButtonDisabled .dijitButtonNode {
+  background-color: #a19ca2;
+  border: solid 1px #9a9a9a;
+  color: #323033;
+  -webkit-box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  -moz-box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  background-image: url("images/buttonDisabled.png");
+  background-image: -moz-linear-gradient(#ffffff 0%, rgba(255, 255, 255, 0) 40%);
+  background-image: -webkit-linear-gradient(#ffffff 0%, rgba(255, 255, 255, 0) 40%);
+  background-image: -o-linear-gradient(#ffffff 0%, rgba(255, 255, 255, 0) 40%);
+  background-image: linear-gradient(#ffffff 0%, rgba(255, 255, 255, 0) 40%);
+  _background-image: none;
+}
+.biotapestry .dijitComboButtonDisabled .dijitArrowButton {
+  border-left-width: 0;
+}
+/* for ComboButton */
+.biotapestry table.dijitComboButton {
+  border-collapse: separate;
+  /* override dijit.css so that ComboBox rounded corners work */
+
+}
+.biotapestry .dijitComboButton .dijitStretch {
+  -moz-border-radius: 4px 0 0 4px;
+  border-radius: 4px 0 0 4px;
+}
+.biotapestry .dijitComboButton .dijitArrowButton {
+  -moz-border-radius: 0 4px 4px 0;
+  border-radius: 0 4px 4px 0;
+}

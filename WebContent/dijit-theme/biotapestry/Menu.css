@@ -1,0 +1,187 @@
+/* Menu 
+
+There are three areas of styling for the Menu:  
+ 
+ 1. The menu 
+ 	There are three types of menus:
+ 	i) Context Menu
+ 	ii) Drop down Menu
+ 	iii) Navigation Menu
+ 	All three types of menus are affected by the .dijitMenu class in which you can set the background-color, padding and border
+ 	.dijitMenu affects the drop down menu in TimeTextBox, Calendar, ComboBox and FilteringSelect
+  .dijitMenuTable - for padding - also affects Select widget 	
+  	
+ 2. The menu bar
+ 	.dijitMenuBar - for border, margins, padding, background-color of the menu bar
+ 	.dijitMenuBar .dijitMenuItem - for padding, text color of menu items in the menu bar (overrides .dijitMenuItem) 
+ 	
+ 3. Menu items - items in the menu.  
+ 	.dijitMenuItem - for color
+ 	.dijitMenuItemHover, .dijitMenuItemSelected - for background-color, border, text color, padding of a menu item or menubar item that has been hovered over or selected	
+ 	.dijitMenuItemActive - for background-color of an active (mousedown) menu item
+	td.dijitMenuItemIconCell - for padding around a  menu item's icon
+	td.dijitMenuItemLabel - for padding around a menu item's label	
+	.dijitMenuSeparatorTop - for border, top border, of the separator
+	.dijitMenuSeparatorBottom - for bottom margin of the separator
+	
+	Styles specific to ComboBox and FilteringSelect widgets: 
+	.dijitComboBoxMenu .dijitMenuItem - for padding and border of a menu item in a ComboBox or FilteringSelect widget's menu
+	.dijitComboBoxMenu .dijitMenuItemSelected- for text color, background-color and border of a menu item in a ComboBox or FilteringSelect widget's menu
+
+*/
+.biotapestry .dijitMenuBar {
+  border: 1px solid #727272;
+  margin: 0;
+  padding: 0;
+  background-color: #a19ca2;
+  background-image: url("images/standardGradient.png");
+  background-repeat: repeat-x;
+  background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  background-image: -o-linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  _background-image: none;
+}
+.biotapestry .dijitMenu {
+  background-color: #bdc4cb;
+  border: 1px solid #4e4e4e;
+  /* so adjoining borders of MenuBar/ComboBox and Menu overlap, avoiding double border */
+
+  margin: -1px 0;
+}
+.dj_ie6 .biotapestry .dijitMenu {
+  margin: 0;
+  /* above -1px makes top/bottom borders disappear on IE6 */
+
+}
+.biotapestry .dijitMenuItem {
+  color: #000000;
+}
+.biotapestry .dijitMenuBar .dijitMenuItem {
+  padding: 6px 10px 7px;
+  margin: -1px;
+}
+.biotapestry .dijitMenuBar .dijitMenuItemHover,
+.biotapestry .dijitMenuBar .dijitMenuItemSelected {
+  border: solid 1px #4e4e4e;
+  padding: 5px 9px 6px;
+}
+/* this prevents jiggling upon hover of a menu item */
+.biotapestry .dijitMenuTable {
+  border-collapse: separate;
+  border-spacing: 0 0;
+  padding: 0;
+}
+.biotapestry .dijitMenuItem td {
+  padding: 1px;
+}
+/* hover over a MenuItem or MenuBarItem */
+.biotapestry .dijitSelectMenu .dijitMenuItemHover td,
+.biotapestry .dijitSelectMenu .dijitMenuItemSelected td,
+.biotapestry .dijitMenuItemHover,
+.biotapestry .dijitMenuItemSelected {
+  background-color: #6080b6;
+  background-image: url("images/standardGradient.png");
+  background-repeat: repeat-x;
+  background-image: -moz-linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  background-image: -webkit-linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  background-image: -o-linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  _background-image: none;
+}
+.biotapestry .dijitMenuItemActive {
+  background-image: url("images/activeGradient.png");
+  background-repeat: repeat-x;
+  background-image: -moz-linear-gradient(rgba(190, 190, 190, 0.98) 0px, rgba(255, 255, 255, 0.65) 3px, rgba(255, 255, 255, 0) 100%);
+  background-image: -webkit-linear-gradient(rgba(190, 190, 190, 0.98) 0px, rgba(255, 255, 255, 0.65) 3px, rgba(255, 255, 255, 0) 100%);
+  background-image: -o-linear-gradient(rgba(190, 190, 190, 0.98) 0px, rgba(255, 255, 255, 0.65) 3px, rgba(255, 255, 255, 0) 100%);
+  background-image: linear-gradient(rgba(190, 190, 190, 0.98) 0px, rgba(255, 255, 255, 0.65) 3px, rgba(255, 255, 255, 0) 100%);
+  _background-image: none;
+}
+.dj_ie .biotapestry .dijitMenuActive .dijitMenuItemHover,
+.dj_ie .biotapestry .dijitMenuActive .dijitMenuItemSelected,
+.dj_ie .biotapestry .dijitMenuPassive .dijitMenuItemHover,
+.dj_ie .biotapestry .dijitMenuPassive .dijitMenuItemSelected {
+  padding-top: 6px;
+  padding-bottom: 5px;
+  margin-top: -3px;
+}
+.biotapestry td.dijitMenuItemIconCell {
+  padding: 2px;
+  margin: 0 0 0 4px;
+}
+.biotapestry td.dijitMenuItemLabel {
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+.biotapestry .dijitMenuExpand {
+  width: 7px;
+  height: 7px;
+  background-image: url("images/spriteArrows.png");
+  background-position: -14px 0;
+  margin-right: 3px;
+}
+.biotapestry .dijitMenuItemDisabled .dijitMenuItemIconCell {
+  opacity: 1;
+}
+.biotapestry .dijitMenuSeparatorTop {
+  height: auto;
+  margin-top: 1px;
+  /* prevents spacing above/below separator */
+
+  border-bottom: 1px solid #727272;
+}
+.biotapestry .dijitMenuSeparatorBottom {
+  height: auto;
+  margin-bottom: 1px;
+}
+/* the checked menu item */
+.biotapestry .dijitCheckedMenuItemIconChar {
+  display: none;
+}
+.biotapestry .dijitCheckedMenuItemIcon {
+  background-image: url("form/images/checkboxRadioButtonStates.png");
+  background-repeat: no-repeat;
+  background-position: -15px 50%;
+  width: 15px;
+  height: 16px;
+}
+.dj_ie6 .biotapestry .dijitCheckedMenuItemIcon {
+  background-image: url("form/images/checkboxAndRadioButtons_IE6.png");
+}
+.biotapestry .dijitCheckedMenuItemChecked .dijitCheckedMenuItemIcon {
+  background-position: 0 50%;
+}
+/*ComboBox Menu*/
+.biotapestry .dijitComboBoxMenu {
+  margin-left: 0;
+  background-image: none;
+}
+.biotapestry .dijitSelectMenu .dijitMenuItem td,
+.biotapestry .dijitComboBoxMenu .dijitMenuItem {
+  padding: 2px;
+  border-width: 1px 0 1px 0;
+  border-style: solid;
+  border-color: #bdc4cb;
+}
+.biotapestry .dijitSelectMenu .dijitMenuItemSelected td,
+.biotapestry .dijitComboBoxMenu .dijitMenuItemSelected {
+  color: #000000;
+  border-color: #4e4e4e;
+  background-color: #6080b6;
+}
+.biotapestry .dijitSelectMenu .dijitMenuItemHover td,
+.biotapestry .dijitComboBoxMenu .dijitMenuItemHover {
+  color: #000000;
+  border-color: #769dc0;
+  background-color: #abd6ff;
+}
+.biotapestry .dijitComboBoxMenuActive .dijitMenuItemSelected {
+  background-color: #44649b;
+  /* TODO: why is this a different color than normal .dijitMenuItemSelected? */
+
+}
+.biotapestry .dijitMenuPreviousButton,
+.biotapestry .dijitMenuNextButton {
+  font-style: italic;
+}

@@ -1,0 +1,241 @@
+/*.biotapestry/form/Common.css */
+
+/*========================= common css =========================*/
+
+@import "../variables";
+
+/* 'dijitTextBox' refers to 'dijit(TextBox|DateTextBox|CurrencyTextBox|...)' */
+
+.biotapestry .dijitTextBox,
+.biotapestry .dijitInputInner {
+    // .dijitInputInner selector needed for ValidationTextBox on IE6 because <input> doesn't inherit
+    // the color setting from the ancestor div.dijitTextBox
+	color: @text-color;
+}
+
+.biotapestry .dijitValidationTextBoxError .dijitValidationContainer {
+	background-color: @erroricon-background-color;
+	background-image: url("../@{image-form-error}");
+	background-position: top center;
+	border: solid @erroricon-background-color 0;
+	width: 9px;
+}
+
+.biotapestry .dijitTextBoxError .dijitValidationContainer {
+	border-left-width: 1px;
+}
+
+.biotapestry .dijitValidationTextBoxError .dijitValidationIcon {
+	width: 0;
+	background-color: transparent !important; /* so the INPUT doesn't obscure the border in rtl+a11y */
+}
+
+/* Padding for the input area of TextBox based widgets, and corresponding padding for the
+ * down arrow button and the placeholder.   placeholder is explicitly listed  because
+ * dijitPlaceHolder is absolutely positioned, so padding set on dijitInputField
+ * won't affect it
+ */
+.biotapestry .dijitTextArea,
+.biotapestry .dijitInputField .dijitPlaceHolder {
+	padding: @textbox-padding;
+}
+
+.biotapestry .dijitSelect .dijitInputField,
+.biotapestry .dijitTextBox .dijitInputField {
+	// Subtract 1px from top/bottom because we add 1px to other nodes, see rules below.
+	// Although we are theoretically only adding 1px to top/bottom browsers seem to pad inputs by 1px on left/right,
+	// although that varies by so compensate for that too.
+	padding: @textbox-padding - 1px  @textbox-padding;
+}
+
+.dj_gecko .biotapestry .dijitTextBox .dijitInputInner,
+.dj_webkit .biotapestry .dijitTextBox .dijitInputInner {
+	// Although we are theoretically only adding 1px to top/bottom, some browsers seem to pad inputs by 1px on left/right,
+	// so compensate for that too.
+	padding: @textbox-padding - 1px;
+}
+
+.biotapestry .dijitSelect,
+.biotapestry .dijitSelect .dijitButtonContents,
+.biotapestry .dijitTextBox,
+.biotapestry .dijitTextBox .dijitButtonNode {
+	/* color for (outer) border on *TextBox widgets, and border between input and buttons on ComboBox and Spinner */
+	border-color: @border-color;
+	.transition-property(background-color, border);
+ 	.transition-duration(.35s);
+}
+
+.biotapestry .dijitSelect,
+.biotapestry .dijitTextBox {
+	background-color: @textbox-background-color;
+}
+
+/* hover */
+.biotapestry .dijitSelectHover,
+.biotapestry .dijitSelectHover .dijitButtonContents,
+.biotapestry .dijitTextBoxHover,
+.biotapestry .dijitTextBoxHover .dijitButtonNode {
+	border-color: @hovered-border-color;
+ 	.transition-duration(.25s);
+}
+
+.biotapestry .dijitTextBoxHover {
+	background-color: @textbox-hovered-background-color;
+	.textbox-background-image;
+}
+
+/* error state */
+.biotapestry .dijitSelectError,
+.biotapestry .dijitSelectError .dijitButtonContents,
+.biotapestry .dijitTextBoxError,
+.biotapestry .dijitTextBoxError .dijitButtonNode {
+	border-color: @error-border-color;
+}
+
+/* focused state */
+.biotapestry .dijitSelectFocused,
+.biotapestry .dijitSelectFocused .dijitButtonContents,
+.biotapestry .dijitTextBoxFocused,
+.biotapestry .dijitTextBoxFocused .dijitButtonNode {
+	border-color:@focused-border-color;
+ 	.transition-duration(.1s);
+}
+
+.biotapestry .dijitTextBoxFocused {
+	background-color: @textbox-focused-background-color;
+	.textbox-background-image;
+}
+.biotapestry .dijitTextBoxFocused .dijitInputContainer {
+	background: @textbox-focused-background-color;
+}
+
+.biotapestry .dijitSelectErrorFocused,
+.biotapestry .dijitSelectErrorFocused .dijitButtonContents,
+.biotapestry .dijitTextBoxErrorFocused,
+.biotapestry .dijitTextBoxErrorFocused .dijitButtonNode {
+	border-color: @error-focused-border-color;
+}
+
+/* disabled state */
+.biotapestry .dijitSelectDisabled,
+.biotapestry .dijitSelectDisabled .dijitButtonContents,
+.biotapestry .dijitTextBoxDisabled,
+.biotapestry .dijitTextBoxDisabled .dijitButtonNode {
+	border-color: @disabled-border-color;
+}
+
+.biotapestry .dijitSelectDisabled,
+.biotapestry .dijitTextBoxDisabled,
+.biotapestry .dijitTextBoxDisabled .dijitInputContainer {
+	background-color: @textbox-disabled-background-color;
+	background-image: none;
+}
+
+.biotapestry .dijitSelectDisabled,
+.biotapestry .dijitTextBoxDisabled,
+.biotapestry .dijitTextBoxDisabled .dijitInputInner {
+	color: @disabled-text-color;
+}
+
+.dj_webkit .biotapestry .dijitDisabled input {
+    /* because WebKit lightens disabled input/textarea no matter what color you specify */
+	color: darken(@disabled-text-color, 5%)
+}
+
+.dj_webkit .biotapestry textarea.dijitTextAreaDisabled {
+    /* because WebKit lightens disabled input/textarea no matter what color you specify */
+	color: darken(@disabled-text-color, 40%)
+}
+
+/*========================= for special widgets =========================*/
+
+/* Input boxes with an arrow (for a drop down) */
+
+.biotapestry .dijitSelect .dijitArrowButtonInner,
+.biotapestry .dijitComboBox .dijitArrowButtonInner {
+	background-image: url("../@{image-form-common-arrows}");
+	background-position:-35px 53%;
+	background-repeat: no-repeat;
+	margin: 0;
+	width:16px;
+}
+
+.biotapestry .dijitComboBox .dijitArrowButtonInner {
+	border: 1px solid @arrowbutton-inner-border-color;	// white gutter around the arrow button
+}
+
+.biotapestry .dijitToolbar .dijitComboBox .dijitArrowButtonInner {
+	border: none;
+}
+
+.biotapestry .dijitToolbar .dijitComboBox .dijitArrowButtonInner {
+	border: none;
+}
+
+/* Add 1px vertical padding to the <input> where user types and the validation icon,
+   to match the 1px border on arrow button */
+.biotapestry .dijitSelectLabel,
+.biotapestry .dijitTextBox .dijitInputInner,
+.biotapestry .dijitValidationTextBox .dijitValidationContainer {
+	padding: 1px 0;
+}
+
+.biotapestry .dijitComboBox .dijitButtonNode {
+	background-color: @arrowbutton-background-color;
+	.standard-gradient("../");
+}
+
+/* Arrow "hover" effect:
+ * The arrow button should change color whenever the mouse is in a position such that clicking it
+ * will toggle the drop down.   That's either (1) anywhere over the ComboBox or (2) over the arrow
+ * button, depending on the openOnClick setting for the widget.
+ */
+.biotapestry .dijitComboBoxOpenOnClickHover .dijitButtonNode,
+.biotapestry .dijitComboBox .dijitDownArrowButtonHover {
+	background-color:@arrowbutton-hovered-background-color;
+}
+
+.biotapestry .dijitComboBoxOpenOnClickHover .dijitArrowButtonInner,
+.biotapestry .dijitComboBox .dijitDownArrowButtonHover .dijitArrowButtonInner {
+	background-position:-70px 53%;
+}
+
+/* Arrow Button change when drop down is open */
+.biotapestry .dijitComboBox .dijitHasDropDownOpen {	// .dijitHasDropDown is on dijitArrowButton node
+	background-color: @pressed-background-color;
+	.active-gradient("../");
+	padding: 1px;		// Since no border on arrow button (see rule below)
+}	
+
+.dj_iequirks .biotapestry .dijitComboBox .dijitHasDropDownOpen {
+	padding: 1px 0;
+}
+
+.biotapestry .dijitComboBox .dijitHasDropDownOpen .dijitArrowButtonInner {
+	background-position:-70px 53%;
+	border: 0 none;
+}
+
+/* disabled state */
+.biotapestry div.dijitComboBoxDisabled .dijitArrowButtonInner {
+	/* specific selector set to override background-position setting from Button.js
+	 * (.biotapestry .dijitComboBoxDisabled .dijitArrowButtonInner) */
+	background-position:0 50%;
+	background-color:@disabled-background-color;
+}
+
+/*========================= hacks for browsers =========================*/
+/* it seems the input[type="hidden"] has a height (16px) too... this may cause the widget's height calculate error */
+.dj_ff3 .biotapestry .dijitInputField input[type="hidden"] {
+	display: none;
+	height: 0;
+	width: 0;
+}
+
+.dj_borderbox .biotapestry .dijitComboBox .dijitHasDropDownOpen .dijitArrowButtonInner {
+	width:18px;				// quirks mode means border-box sizing, so 18px with the border (same as 16px without border)
+}
+
+.dj_borderbox .biotapestry .dijitComboBoxFocused .dijitHasDropDownOpen .dijitArrowButtonInner {
+	width:16px;				// when no border, then back to 16px just like content-box sizing
+}

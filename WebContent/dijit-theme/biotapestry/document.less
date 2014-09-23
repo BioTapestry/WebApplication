@@ -1,0 +1,45 @@
+/* ======= Styling for the document itself (overriding dojo.css) ======== */
+
+@import "variables";
+@import url("../../../dojo/resources/dojo.css");
+
+.biotapestry {
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  font-size: .688em;
+  color: @document-text-color;
+}
+
+/* Headings */
+.biotapestry h1 {
+	font-size: 1.545em; 
+	margin-bottom:0.727em;
+}
+.biotapestry h2 { 
+	font-size: 1.364em; 
+	line-height: 1.455em; 
+	margin-top:1em; 
+	margin-bottom:0.60em;
+	font-weight: normal;
+}
+.biotapestry h3, .biotapestry h4, .biotapestry h5, .biotapestry h6 {
+	font-size:1.091em; 
+	font-weight: normal; 
+}
+
+/* paragraphs, quotes and lists */
+.biotapestry p { 
+	line-height: 1.3em;
+}
+
+/* pre and code */
+.biotapestry pre, .biotapestry code { 
+	font-family:inherit; 
+	background-color: @document-shadedsection-background-color; 
+	border: 1px solid @document-border-color;
+}
+
+/* tables */
+.biotapestry table.dojoTabular thead, .biotapestry table.dojoTabular tfoot { 
+	background-color: @document-shadedsection-background-color; 
+	border: 1px solid @document-border-color; 
+}

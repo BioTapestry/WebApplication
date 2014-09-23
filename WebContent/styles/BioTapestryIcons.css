@@ -1,0 +1,174 @@
+/*
+**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**                            Seattle, Washington, USA. 
+**
+**    This library is free software; you can redistribute it and/or
+**    modify it under the terms of the GNU Lesser General Public
+**    License as published by the Free Software Foundation; either
+**    version 2.1 of the License, or (at your option) any later version.
+**
+**    This library is distributed in the hope that it will be useful,
+**    but WITHOUT ANY WARRANTY; without even the implied warranty of
+**    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+**    Lesser General Public License for more details.
+**
+**    You should have received a copy of the GNU Lesser General Public
+**    License along with this library; if not, write to the Free Software
+**    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+
+.BioTapestryIcons24 {
+	width: 24px;
+	height: 24px;
+	background-repeat: no-repeat;
+}
+
+.BioTapestryIcons16 {
+	width: 16px;
+	height: 16px;
+	background-repeat: no-repeat;
+}
+
+.BioTapestryIcons32 {
+	width: 32px;
+	height: 32px;
+	background-repeat: no-repeat;
+}
+
+
+.ZoomIcons24 {
+	background-image: url(../images/ZoomIcons24.png);
+}
+
+.dijitDisabled .ZoomIcons24 {
+	background-image: url(../images/ZoomIconsDisabled24.png);
+}
+
+.GeneralIcons24 {
+	background-image: url(../images/GeneralIcons24.png);
+}
+
+.dijitDisabled .GeneralIcons24 {
+	background-image: url(../images/GeneralIconsDisabled24.png);
+}
+
+.LetterIcons24 {
+	background-image: url(../images/LetterIcons24.png);
+}
+
+.dijitDisabled .LetterIcons24 {
+	background-image: url(../images/LetterIconsDisabled24.png);
+}
+
+.BioTapIcons224 {
+	background-image: url(../images/IconSheet224.png);
+}
+
+.dijitDisabled .BioTapIcons224 {
+	background-image: url(../images/IconSheet2Disabled24.png);
+}
+
+.BioTapIcons324 {
+	background-image: url(../images/IconSheet324.png);
+}
+
+.dijitDisabled .BioTapIcons324 {
+	background-image: url(../images/IconSheet3Disabled24.png);
+}
+
+.BioTapIcons424 {
+	background-image: url(../images/IconSheet424.png);
+}
+
+.dijitDisabled .BioTapIcons424 {
+	background-image: url(../images/IconSheet4Disabled24.png);
+}
+
+.BioTapIcons524 {
+	background-image: url(../images/IconSheet524.png);
+}
+
+.dijitDisabled .BioTapIcons524 {
+	background-image: url(../images/IconSheet5Disabled24.png);
+}
+
+.BioTapIcons624 {
+	background-image: url(../images/IconSheet624.png);
+}
+
+.dijitDisabled .BioTapIcons624 {
+	background-image: url(../images/IconSheet6Disabled24.png);
+}
+
+.BioTapIcons724 {
+	background-image: url(../images/IconSheet724.png);
+}
+
+.ZoomIcons24Zoom { background-position: 0px; }
+.ZoomIcons24ZoomIn {	background-position: -24px; }
+.ZoomIcons24ZoomOut { background-position: -48px; }
+.ZoomIcons24ZoomToAllModels { background-position: -72px; }
+.ZoomIcons24ZoomToAllSelections { background-position: -96px; }
+.ZoomIcons24ZoomToModel { background-position: -120px; }
+.ZoomIcons24ZoomToSelected { background-position: -144px; }
+
+.GeneralIcons24About { background-position: 0px; }
+.GeneralIcons24Export {	background-position: -24px; }
+.GeneralIcons24Find { background-position: -48px; }
+.GeneralIcons24New { background-position: -72px; }
+.GeneralIcons24Print { background-position: -96px; }
+.GeneralIcons24Save { background-position: -120px; }
+.GeneralIcons24SaveAs { background-position: -144px; }
+
+.LetterIcons24B { background-position: 0px; }
+.LetterIcons24G { background-position: -24px; }
+.LetterIcons24N { background-position: -48px; }
+.LetterIcons24P { background-position: -72px; }
+.LetterIcons24PSelected { background-position: -96px; }
+.LetterIcons24U { background-position: -120px; }
+.LetterIcons24USelected { background-position: -144px; }
+.LetterIcons24S { background-position: -168px; }
+.LetterIcons24H { background-position: -192px; }
+
+.BioTapIcons224Back { background-position: 0px; }
+.BioTapIcons224Forward { background-position: -24px; }
+.BioTapIcons224Stop { background-position: -48px; }
+.BioTapIcons224Warn { background-position: -72px; }
+.BioTapIcons224ErrorCursor { background-position: -96px; }
+.BioTapIcons224Redo { background-position: -120px; }
+.BioTapIcons224Undo { background-position: -144px; }
+
+.BioTapIcons324CenterOnNextSelected { background-position: 0px; }
+.BioTapIcons324CenterOnPrevSelected { background-position: -24px; }
+.BioTapIcons324ClearSelected { background-position: -48px; }
+.BioTapIcons324CreateNewModule { background-position: -72px; }
+.BioTapIcons324CreateNewModuleLink { background-position: -96px; }
+.BioTapIcons324CreateOverlay { background-position: -120px; }
+.BioTapIcons324CreateSubmodel { background-position: -144px; }
+
+.BioTapIcons424DeleteTreePath { background-position: 0px; }
+.BioTapIcons424TreePathAddStop { background-position: -24px; }
+.BioTapIcons424TreePathDeleteStop { background-position: -48px; }
+.BioTapIcons424NewTreePath { background-position: -72px; }
+.BioTapIcons424Propagate { background-position: -96px; }
+.BioTapIcons424Inherit { background-position: -120px; }
+.BioTapIcons424ShowPads { background-position: -144px; }
+
+.BioTapIcons524LinkAvoid { background-position: 0px; }
+.BioTapIcons524LinkMinus { background-position: -24px; }
+.BioTapIcons524LinkPlus { background-position: -48px; }
+.BioTapIcons524LinkQuestion { background-position: -72px; }
+.BioTapIcons524NewLink { background-position: -96px; }
+.BioTapIcons524WebComponent { background-position: -120px; }
+.BioTapIcons524FastForward { background-position: -144px; }
+
+.BioTapIcons624DrawNewNote { background-position: 0px; }
+.BioTapIcons624DrawRegions { background-position: -24px; }
+.BioTapIcons624NewGene { background-position: -48px; }
+.BioTapIcons624NewNodes { background-position: -72px; }
+.BioTapIcons624ShowModuleComps { background-position: -96px; }
+
+.BioTapIcons724Question { background-position: 0px; }
+.BioTapIcons724Failure { background-position: -24px; }
+.BioTapIcons724Error { background-position: -48px; }
+.BioTapIcons724Warning { background-position: -72px; }

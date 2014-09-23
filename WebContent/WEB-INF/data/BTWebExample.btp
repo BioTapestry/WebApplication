@@ -1,0 +1,1349 @@
+<BioTapestry version="5.0" >
+  <timeAxisDefinition units="hours" />
+  <workspace x="0" y="0" w="12000" h="9000" />
+  <startupView/>
+  <fonts>
+    <font name="small" type="serif" isBold="true" isItalic="false" size="20" />
+    <font name="medium" type="serif" isBold="true" isItalic="false" size="28" />
+    <font name="cisRegName" type="serif" isBold="true" isItalic="false" size="28" />
+    <font name="geneName" type="serif" isBold="true" isItalic="false" size="28" />
+    <font name="link" type="serif" isBold="true" isItalic="false" size="28" />
+    <font name="mediumLarge" type="sanSerif" isBold="true" isItalic="false" size="30" />
+    <font name="netModule" type="sanSerif" isBold="true" isItalic="false" size="34" />
+    <font name="large" type="sanSerif" isBold="true" isItalic="false" size="34" />
+    <font name="notes" type="sanSerif" isBold="true" isItalic="false" size="34" />
+    <font name="date" type="sanSerif" isBold="false" isItalic="false" size="25" />
+    <font name="title" type="sanSerif" isBold="true" isItalic="false" size="32" />
+  </fonts>
+  <displayOptions />
+  <colors>
+    <color color="EX-dark-cyan" name="Dark Steel Blue" r="0" g="101" b="128" />
+    <color color="EX-cyan" name="Cyan" r="0" g="255" b="255" />
+    <color color="EX-yellow-orange" name="Tangerine" r="255" g="153" b="0" />
+    <color color="EX-pale-green" name="Pale Green" r="133" g="204" b="102" />
+    <color color="lightOrange" name="Light Orange" r="244" g="211" b="170" />
+    <color color="EX-dark-green" name="Dark Green" r="39" g="128" b="0" />
+    <color color="lightGray" name="Light Gray" r="240" g="240" b="240" />
+    <color color="EX-pale-red-orange" name="Dark Salmon" r="230" g="156" b="138" />
+    <color color="lightBlue" name="Light Blue" r="220" g="220" b="240" />
+    <color color="EX-yellow-green" name="Lime" r="154" g="255" b="0" />
+    <color color="EX-yellow" name="Gold" r="255" g="203" b="0" />
+    <color color="EX-dark-gray-purple" name="Dark Blue" r="0" g="25" b="128" />
+    <color color="yellowGreen" name="Yellow Green" r="246" g="249" b="170" />
+    <color color="EX-dark-red" name="Deep Ochre" r="140" g="56" b="56" />
+    <color color="EX-pale-magenta" name="Light Plum" r="211" g="138" b="230" />
+    <color color="EX-purple" name="Indigo" r="102" g="51" b="255" />
+    <color color="EX-pale-purple" name="Cornflower Blue" r="149" g="165" b="230" />
+    <color color="EX-red" name="Bright Red" r="255" g="0" b="0" />
+    <color color="EX-pale-yellow-green" name="Pale Goldenrod" r="221" g="230" b="138" />
+    <color color="EX-dark-purple" name="Slate Blue" r="77" g="56" b="140" />
+    <color color="EX-pale-cyan" name="Aquamarine" r="138" g="230" b="182" />
+    <color color="EX-pure-blue" name="Blue" r="1" g="0" b="255" />
+    <color color="inactiveLightBlue" name="Very Light Blue" r="235" g="235" b="250" />
+    <color color="lightPurple" name="Light Purple" r="235" g="219" b="229" />
+    <color color="black" name="Black" r="0" g="0" b="0" />
+    <color color="EX-dark-yellow-green" name="Olive Green" r="115" g="128" b="0" />
+    <color color="EX-dark-tan" name="Dark Tan" r="166" g="133" b="83" />
+    <color color="EX-magenta" name="Fuchsia" r="254" g="0" b="255" />
+    <color color="EX-pale-blue" name="Powder Blue" r="102" g="183" b="204" />
+    <color color="white" name="White" r="255" g="255" b="255" />
+    <color color="lightGreen" name="Light Green" r="214" g="239" b="209" />
+    <color color="inactiveLightGreen" name="Very Light Green" r="230" g="255" b="220" />
+    <color color="inactiveLightPurple" name="Very Light Purple" r="245" g="229" b="240" />
+    <color color="EX-orange" name="Pumpkin Orange" r="255" g="103" b="0" />
+    <color color="inactiveYellowGreen" name="Light Yellow Green" r="255" g="255" b="220" />
+    <color color="inactiveLightOrange" name="Very Light Orange" r="255" g="230" b="200" />
+    <color color="EX-medium-magenta" name="Mauve" r="166" g="83" b="166" />
+    <color color="EX-blue-magenta" name="Bright Purple" r="154" g="0" b="255" />
+    <color color="EX-green" name="Bright Green" r="1" g="255" b="0" />
+    <color color="EX-dark-magenta" name="Violet" r="102" g="0" b="128" />
+    <color color="inactiveLightGray" name="Very Light Gray" r="245" g="245" b="245" />
+    <color color="EX-pale-blue-magenta" name="Lilac" r="146" g="102" b="204" />
+    <color color="darkGray" name="Dark Gray" r="150" g="150" b="150" />
+    <color color="EX-pale-yellow orange" name="Dark Wheat" r="204" g="175" b="102" />
+    <color color="EX-dark-orange" name="Sienna" r="128" g="92" b="0" />
+    <color color="EX-blue" name="Sky Blue" r="0" g="152" b="255" />
+    <color color="EX-pale-red" name="Rose" r="204" g="102" b="153" />
+  </colors>
+  <images>
+  </images>
+  <userTreePaths>
+  </userTreePaths>
+  <genome name="Full Genome" id="bioTapA" >
+    <rootLongName />
+    <rootDescription />
+    <nodes>
+      <bares>
+        <bare name="Ubiq" id="13" >
+          <simulationLogic type="AND" />
+        </bare>
+      </bares>
+      <boxes>
+        <box name="Maternal Input" id="0" >
+          <simulationLogic type="AND" />
+        </box>
+        <box name="Maternal Input 2" id="14" >
+          <simulationLogic type="AND" />
+        </box>
+      </boxes>
+      <bubbles>
+        <bubble name="Interaction" id="12" >
+          <simulationLogic type="AND" />
+        </bubble>
+      </bubbles>
+      <intercels>
+        <intercel name="Signal" id="11" >
+          <simulationLogic type="AND" />
+        </intercel>
+      </intercels>
+      <slashes>
+        <slash name="Node 2" id="42" >
+          <simulationLogic type="AND" />
+        </slash>
+      </slashes>
+      <diamonds>
+        <diamond name="Node 1" id="41" >
+          <simulationLogic type="AND" />
+        </diamond>
+      </diamonds>
+      <genes>
+        <gene name="Gene 1" id="1" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 10" id="10" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 2" id="2" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 3" id="3" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 4" id="4" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 5" id="5" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 6" id="6" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 7" id="7" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 8" id="8" >
+          <simulationLogic type="AND" />
+        </gene>
+        <gene name="Gene 9" id="9" >
+          <simulationLogic type="AND" />
+        </gene>
+      </genes>
+    </nodes>
+    <links>
+      <link label="" src="0" targ="1" sign="+" id="15" targPad="2" launchPad="2" />
+      <link label="" src="1" targ="2" sign="+" id="16" targPad="1" />
+      <link label="" src="10" targ="13" sign="+" id="50" targPad="1" />
+      <link label="" src="11" targ="12" sign="+" id="24" targPad="3" />
+      <link label="" src="12" targ="8" sign="+" id="25" targPad="0" launchPad="2" />
+      <link label="" src="13" targ="9" sign="+" id="27" targPad="3" launchPad="2" />
+      <link label="" src="14" targ="10" sign="+" id="28" targPad="0" launchPad="2" />
+      <link label="" src="14" targ="5" sign="+" id="29" targPad="2" launchPad="2" />
+      <link label="" src="2" targ="3" sign="+" id="17" targPad="0" />
+      <link label="" src="3" targ="2" sign="+" id="18" targPad="4" />
+      <link label="" src="3" targ="4" sign="+" id="19" targPad="4" />
+      <link label="" src="4" targ="5" sign="+" id="22" targPad="0" />
+      <link label="" src="4" targ="6" sign="+" id="21" targPad="1" />
+      <link label="" src="4" targ="7" sign="+" id="20" targPad="1" />
+      <link label="" src="41" targ="3" sign="+" id="43" targPad="4" launchPad="2" />
+      <link label="" src="42" targ="41" sign="-" id="44" targPad="0" />
+      <link label="" src="7" targ="11" id="23" targPad="0" />
+      <link label="" src="9" targ="12" sign="+" id="26" targPad="0" />
+    </links>
+    <netOverlays>
+    </netOverlays>
+    <notes>
+      <note id="45" name="*" interactive="true" >Interactive Note Example</note>
+      <note id="46" name="Note Text Example" interactive="false"/>
+    </notes>
+  </genome>
+  <genomeInstances>
+    <genomeInstance name="Submodel 1" id="bioTapC" minTime="0" maxTime="8" >
+      <longName />
+      <description />
+      <nodeInstances>
+        <bareInstances>
+          <bareInstance ref="13" instance="0" />
+        </bareInstances>
+        <boxInstances>
+          <boxInstance ref="0" instance="0" />
+          <boxInstance ref="14" instance="0" />
+        </boxInstances>
+        <bubbleInstances>
+          <bubbleInstance ref="12" instance="0" />
+        </bubbleInstances>
+        <intercelInstances>
+          <intercelInstance ref="11" instance="0" />
+        </intercelInstances>
+        <geneInstances>
+          <geneInstance ref="10" instance="0" />
+          <geneInstance ref="1" instance="0" />
+          <geneInstance ref="2" instance="0" />
+          <geneInstance ref="3" instance="0" />
+          <geneInstance ref="4" instance="0" />
+          <geneInstance ref="5" instance="0" />
+          <geneInstance ref="5" instance="1" />
+          <geneInstance ref="6" instance="0" />
+          <geneInstance ref="7" instance="0" />
+          <geneInstance ref="8" instance="0" />
+          <geneInstance ref="9" instance="0" />
+        </geneInstances>
+      </nodeInstances>
+      <linkInstances>
+        <linkInstance src="0:0" targ="1:0" ref="15" targPad="2" launchPad="2" instance="0" />
+        <linkInstance src="11:0" targ="12:0" ref="24" targPad="3" launchPad="0" instance="0" />
+        <linkInstance src="12:0" targ="8:0" ref="25" targPad="0" launchPad="2" instance="0" />
+        <linkInstance src="13:0" targ="9:0" ref="27" targPad="3" launchPad="2" instance="0" />
+        <linkInstance src="14:0" targ="10:0" ref="28" targPad="0" launchPad="2" instance="0" />
+        <linkInstance src="14:0" targ="5:1" ref="29" targPad="2" launchPad="2" instance="0" />
+        <linkInstance src="1:0" targ="2:0" ref="16" targPad="1" launchPad="0" instance="0" />
+        <linkInstance src="2:0" targ="3:0" ref="17" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="3:0" targ="2:0" ref="18" targPad="4" launchPad="0" instance="0" />
+        <linkInstance src="3:0" targ="4:0" ref="19" targPad="4" launchPad="0" instance="0" />
+        <linkInstance src="4:0" targ="5:0" ref="22" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="4:0" targ="6:0" ref="21" targPad="1" launchPad="0" instance="0" />
+        <linkInstance src="4:0" targ="7:0" ref="20" targPad="1" launchPad="0" instance="0" />
+        <linkInstance src="7:0" targ="11:0" ref="23" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="9:0" targ="12:0" ref="26" targPad="0" launchPad="0" instance="0" />
+      </linkInstances>
+      <groups>
+        <group id="30" name="A" >
+          <members>
+            <member ref="11:0" />
+            <member ref="6:0" />
+            <member ref="0:0" />
+            <member ref="7:0" />
+            <member ref="3:0" />
+            <member ref="5:0" />
+            <member ref="1:0" />
+            <member ref="2:0" />
+            <member ref="4:0" />
+          </members>
+        </group>
+        <group id="31" name="B" >
+          <members>
+            <member ref="8:0" />
+            <member ref="13:0" />
+            <member ref="14:0" />
+            <member ref="10:0" />
+            <member ref="12:0" />
+            <member ref="9:0" />
+            <member ref="5:1" />
+          </members>
+        </group>
+      </groups>
+      <netOverlays>
+      </netOverlays>
+      <notes>
+      </notes>
+    </genomeInstance>
+    <genomeInstance name="Overlays Example" id="bioTapF" >
+      <longName />
+      <description />
+      <nodeInstances>
+        <bareInstances>
+          <bareInstance ref="13" instance="0" />
+        </bareInstances>
+        <boxInstances>
+          <boxInstance ref="0" instance="0" />
+          <boxInstance ref="14" instance="0" />
+          <boxInstance ref="14" instance="1" />
+        </boxInstances>
+        <bubbleInstances>
+          <bubbleInstance ref="12" instance="0" />
+        </bubbleInstances>
+        <intercelInstances>
+          <intercelInstance ref="11" instance="0" />
+        </intercelInstances>
+        <slashInstances>
+          <slashInstance ref="42" instance="0" />
+        </slashInstances>
+        <diamondInstances>
+          <diamondInstance ref="41" instance="0" />
+        </diamondInstances>
+        <geneInstances>
+          <geneInstance ref="10" instance="0" />
+          <geneInstance ref="1" instance="0" />
+          <geneInstance ref="2" instance="0" />
+          <geneInstance ref="3" instance="0" />
+          <geneInstance ref="4" instance="0" />
+          <geneInstance ref="5" instance="0" />
+          <geneInstance ref="5" instance="1" />
+          <geneInstance ref="6" instance="0" />
+          <geneInstance ref="7" instance="0" />
+          <geneInstance ref="9" instance="0" />
+        </geneInstances>
+      </nodeInstances>
+      <linkInstances>
+        <linkInstance src="0:0" targ="1:0" ref="15" targPad="2" launchPad="2" instance="0" />
+        <linkInstance src="13:0" targ="9:0" ref="27" targPad="3" launchPad="2" instance="0" />
+        <linkInstance src="14:0" targ="10:0" ref="28" targPad="0" launchPad="2" instance="0" />
+        <linkInstance src="14:0" targ="5:0" ref="29" targPad="2" launchPad="2" instance="0" />
+        <linkInstance src="14:1" targ="5:1" ref="29" targPad="2" launchPad="2" instance="1" />
+        <linkInstance src="1:0" targ="2:0" ref="16" targPad="1" launchPad="0" instance="0" />
+        <linkInstance src="2:0" targ="3:0" ref="17" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="3:0" targ="2:0" ref="18" targPad="4" launchPad="0" instance="0" />
+        <linkInstance src="41:0" targ="3:0" ref="43" targPad="4" launchPad="2" instance="0" />
+        <linkInstance src="42:0" targ="41:0" ref="44" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="4:0" targ="5:1" ref="22" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="4:0" targ="6:0" ref="21" targPad="1" launchPad="0" instance="0" />
+        <linkInstance src="4:0" targ="7:0" ref="20" targPad="1" launchPad="0" instance="0" />
+        <linkInstance src="7:0" targ="11:0" ref="23" targPad="0" launchPad="0" instance="0" />
+        <linkInstance src="9:0" targ="12:0" ref="26" targPad="0" launchPad="0" instance="0" />
+      </linkInstances>
+      <groups>
+        <group id="32" name="Region 1" >
+          <members>
+            <member ref="0:0" />
+            <member ref="41:0" />
+            <member ref="2:0" />
+            <member ref="3:0" />
+            <member ref="1:0" />
+            <member ref="42:0" />
+          </members>
+        </group>
+        <group id="33" name="Region 2" >
+          <members>
+            <member ref="13:0" />
+            <member ref="10:0" />
+            <member ref="9:0" />
+            <member ref="12:0" />
+            <member ref="14:0" />
+            <member ref="5:0" />
+          </members>
+        </group>
+        <group id="34" name="Region 3" >
+          <members>
+            <member ref="7:0" />
+            <member ref="11:0" />
+            <member ref="5:1" />
+            <member ref="4:0" />
+            <member ref="6:0" />
+            <member ref="14:1" />
+          </members>
+        </group>
+      </groups>
+      <netOverlays>
+        <netOverlay id="35" name="Overlay 1" >
+          <netModules>
+            <netModule id="36" name="Transparent" >
+              <modMembers>
+                <modMember ref="1:0" />
+                <modMember ref="3:0" />
+                <modMember ref="0:0" />
+                <modMember ref="2:0" />
+              </modMembers>
+            </netModule>
+          </netModules>
+        </netOverlay>
+        <netOverlay id="37" name="Overlay 2" >
+          <netModules>
+            <netModule id="38" name="Opaque" >
+              <modMembers>
+                <modMember ref="12:0" />
+                <modMember ref="14:0" />
+                <modMember ref="13:0" />
+                <modMember ref="5:0" />
+                <modMember ref="9:0" />
+                <modMember ref="10:0" />
+              </modMembers>
+            </netModule>
+            <netModule id="47" name="Another Opaque" >
+              <modMembers>
+                <modMember ref="1:0" />
+                <modMember ref="4:0" />
+                <modMember ref="0:0" />
+              </modMembers>
+            </netModule>
+          </netModules>
+          <netModuleLinks>
+            <netModuleLink id="48" sign="positive" src="47" trg="38" />
+          </netModuleLinks>
+        </netOverlay>
+        <netOverlay id="39" name="Overlay 3" >
+          <netModules>
+            <netModule id="40" name="Underlay" >
+              <modMembers>
+                <modMember ref="7:0" />
+                <modMember ref="4:0" />
+                <modMember ref="6:0" />
+                <modMember ref="11:0" />
+                <modMember ref="5:1" />
+              </modMembers>
+            </netModule>
+          </netModules>
+        </netOverlay>
+      </netOverlays>
+      <notes>
+      </notes>
+    </genomeInstance>
+  </genomeInstances>
+  <layouts>
+    <layout name="bioTapG" genome="bioTapF" type="free" >
+      <layoutMetadata />
+      <props>
+        <nprops>
+          <nprop id="0:0" color="darkGray" x="4620.0" y="3350.0" orient="right" />
+          <nprop id="10:0" color="black" x="5460.0" y="3460.0" orient="right" />
+          <nprop id="11:0" color="EX-dark-orange" color2="EX-dark-gray-purple" x="4920.0" y="4060.0" orient="right" />
+          <nprop id="12:0" color="white" x="5440.0" y="3780.0" orient="right" extraGrowth="horz" />
+          <nprop id="13:0" color="black" x="5510.0" y="3630.0" orient="right" />
+          <nprop id="14:0" color="EX-yellow" x="5470.0" y="3390.0" orient="right" />
+          <nprop id="14:1" color="EX-yellow" x="5060.0" y="3780.0" orient="right" />
+          <nprop id="1:0" color="EX-blue" x="4590.0" y="3400.0" orient="right" />
+          <nprop id="2:0" color="EX-orange" x="4720.0" y="3470.0" orient="right" />
+          <nprop id="3:0" color="EX-dark-cyan" x="4890.0" y="3520.0" orient="right" />
+          <nprop id="41:0" color="white" x="4940.0" y="3360.0" orient="right" extraGrowth="horz" />
+          <nprop id="42:0" color="EX-yellow-orange" x="4740.0" y="3260.0" orient="right" />
+          <nprop id="4:0" color="EX-red" x="4810.0" y="3940.0" orient="left" />
+          <nprop id="5:0" color="black" x="5240.0" y="3770.0" orient="right" />
+          <nprop id="5:1" color="black" x="4530.0" y="4050.0" orient="right" />
+          <nprop id="6:0" color="black" x="4650.0" y="4050.0" orient="right" />
+          <nprop id="7:0" color="EX-dark-orange" x="4770.0" y="4050.0" orient="right" />
+          <nprop id="9:0" color="EX-cyan" x="5460.0" y="3660.0" orient="left" />
+        </nprops>
+        <lprops>
+          <linkBus labelX="5000.0" labelY="3540.0" src="0:0" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="15:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5080.0" labelY="3620.0" src="1:0" >
+            <drawStyle color="EX-blue" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="4740.0" strtY="3410.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="16:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5080.0" labelY="3670.0" src="2:0" >
+            <drawStyle color="EX-orange" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="4900.0" strtY="3480.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="17:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5080.0" labelY="3650.0" src="3:0" >
+            <drawStyle color="EX-dark-cyan" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="2" parent="0" strtX="4980.0" strtY="3440.0" endX="4770.0" endY="3440.0" />
+              <linkSegment id="0" strtX="4980.0" strtY="3440.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="18:0" connectEnd="2" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5110.0" labelY="3730.0" src="4:0" >
+            <drawStyle color="EX-red" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="2" parent="1" strtX="4670.0" strtY="3950.0" endX="4540.0" endY="3950.0" />
+              <linkSegment id="1" parent="0" strtX="4790.0" strtY="3950.0" endX="4670.0" endY="3950.0" />
+              <linkSegment id="0" strtX="4790.0" strtY="3950.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="20:0" connectStart="0" />
+              <drop ref="21:0" connectEnd="1" />
+              <drop ref="22:0" connectEnd="2" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5110.0" labelY="3820.0" src="7:0" >
+            <drawStyle color="EX-dark-orange" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="23:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5210.0" labelY="3800.0" src="9:0" >
+            <drawStyle color="EX-cyan" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="5440.0" strtY="3670.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="26:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5280.0" labelY="3760.0" src="13:0" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="27:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5240.0" labelY="3610.0" src="14:0" >
+            <drawStyle color="EX-yellow" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="3" parent="2" strtX="5360.0" strtY="3630.0" endX="5270.0" endY="3630.0" />
+              <linkSegment id="2" parent="1" strtX="5360.0" strtY="3440.0" endX="5360.0" endY="3630.0" />
+              <linkSegment id="1" parent="0" strtX="5470.0" strtY="3440.0" endX="5360.0" endY="3440.0" />
+              <linkSegment id="0" strtX="5470.0" strtY="3440.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="29:0" connectEnd="3" />
+              <drop ref="28:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5140.0" labelY="3650.0" src="14:1" >
+            <drawStyle color="EX-yellow" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="3" parent="2" strtX="4950.0" strtY="3910.0" endX="4560.0" endY="3910.0" />
+              <linkSegment id="2" parent="1" strtX="4950.0" strtY="3830.0" endX="4950.0" endY="3910.0" />
+              <linkSegment id="1" parent="0" strtX="5060.0" strtY="3830.0" endX="4950.0" endY="3830.0" />
+              <linkSegment id="0" strtX="5060.0" strtY="3830.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="29:1" connectEnd="3" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5120.0" labelY="3522.0" src="41:0" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="43:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5044.0" labelY="3360.0" labelDir="" src="42:0" >
+            <drawStyle color="EX-yellow-orange" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="4940.0" strtY="3260.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="44:0" connectStart="0" />
+            </drops>
+          </linkBus>
+        </lprops>
+        <gprops>
+          <gprop id="32" color="yellowGreen" inactiveColor="inactiveYellowGreen" style="autobound" layer="0" order="1" tpad="30" bpad="30" lpad="30" rpad="30" nameX="4960.0" nameY="3670.0" />
+          <gprop id="33" color="lightOrange" inactiveColor="inactiveLightOrange" style="autobound" layer="0" order="2" tpad="30" bpad="30" lpad="30" rpad="30" nameX="5560.0" nameY="4100.0" />
+          <gprop id="34" color="lightPurple" inactiveColor="inactiveLightPurple" style="autobound" layer="0" order="3" tpad="30" bpad="30" lpad="30" rpad="30" nameX="4600.0" nameY="3790.0" />
+        </gprops>
+        <nOvrProps>
+          <nOvrProp ref="35" type="trans" >
+            <nModProps>
+              <nModProp id="36" color="black" fillColor="white" type="contig" nameFade="slow" labelX="4600.0" labelY="3600.0" >
+                <nModPropShapes>
+                  <nModPropShape x="4510.0" y="3320.0" width="480.0" height="310.0" />
+                </nModPropShapes>
+              </nModProp>
+            </nModProps>
+            <nModLinkProps>
+            </nModLinkProps>
+          </nOvrProp>
+          <nOvrProp ref="37" type="opaque" >
+            <nModProps>
+              <nModProp id="38" color="EX-dark-red" fillColor="EX-pale-red-orange" type="contig" nameFade="slow" labelX="5520.0" labelY="3850.0" >
+                <nModPropShapes>
+                  <nModPropShape x="5230.0" y="3350.0" width="390.0" height="540.0" />
+                </nModPropShapes>
+              </nModProp>
+              <nModProp id="47" color="EX-dark-green" fillColor="EX-pale-green" type="multi" nameFade="slow" labelX="4660.0" labelY="3590.0" >
+                <nModPropShapes>
+                  <nModPropShape x="4510.0" y="3230.0" width="240.0" height="290.0" />
+                  <nModPropShape x="4500.0" y="3750.0" width="410.0" height="320.0" />
+                </nModPropShapes>
+              </nModProp>
+            </nModProps>
+            <nModLinkProps>
+              <nModLinkProp id="49" src="47" >
+                <drawStyle color="black" style="solid" thick="regular" />
+                <segments>
+                </segments>
+                <drops>
+                  <drop ref="*" x="4820.0" y="3590.0" xoff="-1" yoff="0" />
+                  <drop ref="48" x="5220.0" y="3570.0" xoff="1" yoff="0" />
+                </drops>
+              </nModLinkProp>
+            </nModLinkProps>
+          </nOvrProp>
+          <nOvrProp ref="39" type="underlay" >
+            <nModProps>
+              <nModProp id="40" color="EX-dark-cyan" fillColor="lightBlue" type="contig" nameFade="slow" labelX="4970.0" labelY="4120.0" >
+                <nModPropShapes>
+                  <nModPropShape x="4510.0" y="3890.0" width="510.0" height="260.0" />
+                </nModPropShapes>
+              </nModProp>
+            </nModProps>
+            <nModLinkProps>
+            </nModLinkProps>
+          </nOvrProp>
+        </nOvrProps>
+      </props>
+    </layout>
+    <layout name="bioTapD" genome="bioTapC" type="free" >
+      <layoutMetadata />
+      <props>
+        <nprops>
+          <nprop id="0:0" color="darkGray" x="4840.0" y="3470.0" orient="right" />
+          <nprop id="10:0" color="black" x="5570.0" y="3580.0" orient="right" />
+          <nprop id="11:0" color="EX-dark-orange" color2="EX-dark-gray-purple" x="5280.0" y="3860.0" orient="right" hideName="true" />
+          <nprop id="12:0" color="white" x="5370.0" y="3860.0" orient="right" hideName="true" extraGrowth="horz" />
+          <nprop id="13:0" color="black" x="5480.0" y="3710.0" orient="right" />
+          <nprop id="14:0" color="EX-yellow" x="5520.0" y="3470.0" orient="right" />
+          <nprop id="1:0" color="EX-blue" x="4810.0" y="3570.0" orient="right" />
+          <nprop id="2:0" color="EX-orange" x="4940.0" y="3640.0" orient="right" />
+          <nprop id="3:0" color="EX-dark-cyan" x="5080.0" y="3640.0" orient="right" />
+          <nprop id="4:0" color="EX-red" x="5160.0" y="3740.0" orient="left" />
+          <nprop id="5:0" color="black" x="4840.0" y="3850.0" orient="right" />
+          <nprop id="5:1" color="black" x="5400.0" y="3580.0" orient="right" />
+          <nprop id="6:0" color="black" x="4980.0" y="3850.0" orient="right" />
+          <nprop id="7:0" color="EX-dark-orange" x="5120.0" y="3850.0" orient="right" />
+          <nprop id="8:0" color="black" x="5360.0" y="3860.0" orient="right" />
+          <nprop id="9:0" color="EX-cyan" x="5430.0" y="3740.0" orient="left" />
+        </nprops>
+        <lprops>
+          <linkBus labelX="4830.0" labelY="3500.0" src="0:0" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="15:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="4960.0" labelY="3580.0" src="1:0" >
+            <drawStyle color="EX-blue" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="4960.0" strtY="3580.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="16:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5090.0" labelY="3650.0" src="2:0" >
+            <drawStyle color="EX-orange" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="5090.0" strtY="3650.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="17:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5200.0" labelY="3610.0" src="3:0" >
+            <drawStyle color="EX-dark-cyan" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="2" parent="1" strtX="5200.0" strtY="3610.0" endX="4990.0" endY="3610.0" />
+              <linkSegment id="1" parent="0" strtX="5200.0" strtY="3650.0" endX="5200.0" endY="3610.0" />
+              <linkSegment id="0" strtX="5200.0" strtY="3650.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="18:0" connectEnd="2" />
+              <drop ref="19:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5140.0" labelY="3750.0" labelDir="" src="4:0" >
+            <drawStyle color="EX-red" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="2" parent="1" strtX="5000.0" strtY="3750.0" endX="4850.0" endY="3750.0" />
+              <linkSegment id="1" parent="0" strtX="5140.0" strtY="3750.0" endX="5000.0" endY="3750.0" />
+              <linkSegment id="0" strtX="5140.0" strtY="3750.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="21:0" connectEnd="1" />
+              <drop ref="22:0" connectEnd="2" />
+              <drop ref="20:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5210.0" labelY="3880.0" src="7:0" >
+            <drawStyle color="EX-dark-orange" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="23:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5280.0" labelY="3880.0" src="11:0" >
+            <drawStyle color="EX-dark-gray-purple" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="24:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5380.0" labelY="3890.0" labelDir="" src="12:0" >
+            <drawStyle color="EX-cyan" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="25:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5380.0" labelY="3750.0" src="9:0" >
+            <drawStyle color="EX-cyan" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="5370.0" strtY="3750.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="26:0" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5450.0" labelY="3710.0" src="13:0" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="27:0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5410.0" labelY="3560.0" src="14:0" >
+            <drawStyle color="EX-yellow" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="5520.0" strtY="3560.0" />
+              <linkSegment id="6" parent="5" strtX="5430.0" strtY="3560.0" endX="5430.0" endY="3590.0" />
+              <linkSegment id="5" parent="0" strtX="5520.0" strtY="3560.0" endX="5430.0" endY="3560.0" />
+              <linkSegment id="4" parent="0" strtX="5520.0" strtY="3560.0" endX="5580.0" endY="3560.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="28:0" connectEnd="4" />
+              <drop ref="29:0" connectEnd="6" />
+            </drops>
+          </linkBus>
+        </lprops>
+        <gprops>
+          <gprop id="30" color="yellowGreen" inactiveColor="inactiveYellowGreen" style="autobound" layer="0" order="1" tpad="30" bpad="40" lpad="30" rpad="-25" nameX="5200.0" nameY="3480.0" />
+          <gprop id="31" color="lightOrange" inactiveColor="inactiveLightOrange" style="autobound" layer="0" order="2" tpad="30" bpad="30" lpad="30" rpad="30" nameX="5350.0" nameY="3480.0" />
+        </gprops>
+        <dprops>
+          <dprop key="title" x="5200.0" y="3400.0" />
+        </dprops>
+      </props>
+    </layout>
+    <layout name="bioTapB" genome="bioTapA" type="free" >
+      <layoutMetadata />
+      <props>
+        <nprops>
+          <nprop id="0" color="darkGray" x="4840.0" y="3470.0" orient="right" />
+          <nprop id="1" color="EX-blue" x="4810.0" y="3570.0" orient="right" />
+          <nprop id="10" color="EX-pure-blue" x="5400.0" y="3580.0" orient="right" />
+          <nprop id="11" color="EX-dark-orange" color2="EX-dark-gray-purple" x="5270.0" y="3920.0" orient="right" hideName="true" />
+          <nprop id="12" color="white" x="5380.0" y="3920.0" orient="right" hideName="true" extraGrowth="horz" />
+          <nprop id="13" color="black" x="5450.0" y="3750.0" orient="right" />
+          <nprop id="14" color="EX-yellow" x="5410.0" y="3470.0" orient="right" />
+          <nprop id="2" color="EX-orange" x="4940.0" y="3640.0" orient="right" />
+          <nprop id="3" color="EX-dark-cyan" x="5080.0" y="3640.0" orient="right" />
+          <nprop id="4" color="EX-red" x="5160.0" y="3780.0" orient="left" />
+          <nprop id="41" color="white" x="5130.0" y="3500.0" orient="right" extraGrowth="horz" />
+          <nprop id="42" color="EX-yellow-orange" x="4950.0" y="3400.0" orient="right" />
+          <nprop id="5" color="black" x="4840.0" y="3910.0" orient="right" />
+          <nprop id="6" color="black" x="4980.0" y="3910.0" orient="right" />
+          <nprop id="7" color="EX-dark-orange" x="5120.0" y="3910.0" orient="right" />
+          <nprop id="8" color="black" x="5370.0" y="3930.0" orient="right" />
+          <nprop id="9" color="EX-cyan" x="5400.0" y="3780.0" orient="left" />
+        </nprops>
+        <lprops>
+          <linkBus labelX="4830.0" labelY="3500.0" src="0" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="15" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="4960.0" labelY="3580.0" labelDir="" src="1" >
+            <drawStyle color="EX-blue" style="dot" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="4960.0" strtY="3580.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="16" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5090.0" labelY="3650.0" src="2" >
+            <drawStyle color="EX-orange" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="5090.0" strtY="3650.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="17" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5200.0" labelY="3610.0" labelDir="" src="3" >
+            <drawStyle color="EX-dark-cyan" style="dash" thick="thick" />
+            <segments>
+              <linkSegment id="2" parent="1" strtX="5200.0" strtY="3610.0" endX="4990.0" endY="3610.0" />
+              <linkSegment id="1" parent="0" strtX="5200.0" strtY="3650.0" endX="5200.0" endY="3610.0" />
+              <linkSegment id="0" strtX="5200.0" strtY="3650.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="18" connectEnd="2" />
+              <drop ref="19" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5140.0" labelY="3750.0" src="4" >
+            <drawStyle color="EX-red" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="2" parent="1" strtX="5000.0" strtY="3790.0" endX="4850.0" endY="3790.0" />
+              <linkSegment id="1" parent="0" strtX="5140.0" strtY="3790.0" endX="5000.0" endY="3790.0" />
+              <linkSegment id="0" strtX="5140.0" strtY="3790.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="20" connectStart="0" />
+              <drop ref="21" connectEnd="1" />
+              <drop ref="22" connectEnd="2" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5210.0" labelY="3880.0" src="7" >
+            <drawStyle color="EX-dark-orange" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="23" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5280.0" labelY="3880.0" src="11" >
+            <drawStyle color="EX-dark-gray-purple" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="24" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5380.0" labelY="3890.0" labelDir="" src="12" >
+            <drawStyle color="EX-cyan" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="25" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5380.0" labelY="3750.0" labelDir="" src="9" >
+            <drawStyle color="EX-cyan" style="dash" thick="thin" />
+            <segments>
+              <linkSegment id="0" strtX="5380.0" strtY="3790.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="26" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5450.0" labelY="3710.0" src="13" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="27" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5410.0" labelY="3560.0" src="14" >
+            <drawStyle color="EX-yellow" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="3" parent="2" strtX="5300.0" strtY="3750.0" endX="4870.0" endY="3750.0" />
+              <linkSegment id="2" parent="1" strtX="5300.0" strtY="3560.0" endX="5300.0" endY="3750.0" />
+              <linkSegment id="1" parent="0" strtX="5410.0" strtY="3560.0" endX="5300.0" endY="3560.0" />
+              <linkSegment id="0" strtX="5410.0" strtY="3560.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="28" connectStart="0" />
+              <drop ref="29" connectEnd="3" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5120.0" labelY="3522.0" src="41" >
+            <drawStyle color="black" style="solid" thick="regular" />
+            <segments>
+            </segments>
+            <drops>
+              <drop ref="*" />
+              <drop ref="43" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5044.0" labelY="3360.0" labelDir="" src="42" >
+            <drawStyle color="EX-yellow-orange" style="solid" thick="regular" />
+            <segments>
+              <linkSegment id="0" strtX="5130.0" strtY="3400.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="44" connectStart="0" />
+            </drops>
+          </linkBus>
+          <linkBus labelX="5490.0" labelY="3590.0" labelDir="" src="10" >
+            <drawStyle color="EX-dark-magenta" style="dash" thick="regular" />
+            <segments>
+              <linkSegment id="1" parent="0" strtX="5570.0" strtY="3590.0" endX="5570.0" endY="3750.0" />
+              <linkSegment id="0" strtX="5570.0" strtY="3590.0" />
+            </segments>
+            <drops>
+              <drop ref="*" connectStart="0" />
+              <drop ref="50" connectEnd="1" />
+            </drops>
+          </linkBus>
+        </lprops>
+        <ntprops>
+          <ntprop id="45" color="EX-dark-magenta" x="5060.0" y="3370.0" />
+          <ntprop id="46" color="EX-dark-orange" x="5400.0" y="3370.0" />
+        </ntprops>
+      </props>
+    </layout>
+  </layouts>
+  <TimeCourseData>
+    <timeCourse gene="Gene 1" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="yes" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="yes" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Maternal Input" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="yes" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="yes" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="yes" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Maternal Input 2" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="yes" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="yes" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="yes" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 2" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="yes" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="yes" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="yes" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 3" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="yes" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="yes" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 4" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="yes" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 5" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="yes" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="yes" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 6" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 7" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Signal" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="yes" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="yes" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="yes" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="yes" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 8" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="yes" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="yes" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 9" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="yes" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="yes" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="yes" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="yes" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="yes" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="yes" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="yes" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="yes" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Gene 10" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="yes" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="yes" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="yes" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="no" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="no" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="no" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Ubiq" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="yes" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="yes" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="yes" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="yes" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="yes" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="yes" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="yes" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="yes" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="yes" />
+      </expData>
+    </timeCourse>
+    <timeCourse gene="Interaction" baseConfidence="normal" timeCourse="no" note="">
+      <expData>
+        <data region="A" time="0" expr="no" />
+        <data region="B" time="0" expr="no" />
+        <data region="A" time="1" expr="no" />
+        <data region="B" time="1" expr="no" />
+        <data region="A" time="2" expr="no" />
+        <data region="B" time="2" expr="no" />
+        <data region="A" time="3" expr="no" />
+        <data region="B" time="3" expr="no" />
+        <data region="A" time="4" expr="no" />
+        <data region="B" time="4" expr="no" />
+        <data region="A" time="5" expr="no" />
+        <data region="B" time="5" expr="no" />
+        <data region="A" time="6" expr="no" />
+        <data region="B" time="6" expr="yes" />
+        <data region="A" time="7" expr="no" />
+        <data region="B" time="7" expr="yes" />
+        <data region="A" time="8" expr="no" />
+        <data region="B" time="8" expr="yes" />
+      </expData>
+    </timeCourse>
+  </TimeCourseData>
+  <TemporalInputRangeData>
+    <temporalRange name="Gene 1" note="">
+      <inputTimeRange input="Maternal Input">
+        <range region="A" minTime="0" maxTime="2" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 2" note="">
+      <inputTimeRange input="Gene 1">
+        <range region="A" minTime="1" maxTime="2" sign="promote" />
+      </inputTimeRange>
+      <inputTimeRange input="Gene 3">
+        <range region="A" minTime="3" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 3" note="">
+      <inputTimeRange input="Gene 2">
+        <range region="A" minTime="3" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 4" note="">
+      <inputTimeRange input="Gene 3">
+        <range region="A" minTime="3" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 5" note="">
+      <inputTimeRange input="Gene 4">
+        <range region="A" minTime="4" maxTime="8" sign="promote" />
+      </inputTimeRange>
+      <inputTimeRange input="Maternal Input 2">
+        <range region="B" minTime="0" maxTime="2" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 6" note="">
+      <inputTimeRange input="Gene 4">
+        <range region="A" minTime="4" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 7" note="">
+      <inputTimeRange input="Gene 4">
+        <range region="A" minTime="4" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Signal" note="">
+      <inputTimeRange input="Gene 7">
+        <range region="A" minTime="5" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 8" note="">
+      <inputTimeRange input="Interaction">
+        <range region="B" minTime="6" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 9" note="">
+      <inputTimeRange input="Ubiq">
+        <range region="B" minTime="0" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Interaction" note="">
+      <inputTimeRange input="Gene 9">
+        <range region="B" minTime="1" maxTime="8" sign="promote" />
+      </inputTimeRange>
+      <inputTimeRange input="Signal">
+        <range region="B" minTime="6" maxTime="8" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+    <temporalRange name="Gene 10" note="">
+      <inputTimeRange input="Maternal Input 2">
+        <range region="B" minTime="0" maxTime="2" sign="promote" />
+      </inputTimeRange>
+    </temporalRange>
+  </TemporalInputRangeData>
+  <dynamicProxy name="Hourly Summation" minHour="0" maxHour="8" isSingle="true" id="bioTapD" vfgParent="bioTapC" >
+    <dpGroups>
+      <dpGroup ref="30" inherited="true" />
+      <dpGroup ref="31" inherited="true" />
+    </dpGroups>
+    <dpNotes>
+    </dpNotes>
+    <netOverlays>
+    </netOverlays>
+  </dynamicProxy>
+  <dynamicProxy name="Hourly" minHour="0" maxHour="8" id="bioTapE" vfgParent="{DiP}@bioTapC-bioTapD:ALL" >
+    <dpGroups>
+      <dpGroup ref="30:0" inherited="true" />
+      <dpGroup ref="31:0" inherited="true" />
+    </dpGroups>
+    <dpNotes>
+    </dpNotes>
+    <netOverlays>
+    </netOverlays>
+  </dynamicProxy>
+</BioTapestry>

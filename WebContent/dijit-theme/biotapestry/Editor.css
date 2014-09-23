@@ -1,0 +1,55 @@
+/* Editor 
+ * 
+ * Styling Editor means styling the Editor inside iframe container (dijitEditorIFrameContainer)
+ * 
+ * 1. Editor iframe container (default styling): 
+ * 		.dijitEditorIFrameContainer - normal state styles: background-color, border, padding
+ *
+ * 2. hovered Editor iframe container (ie, mouse hover on editor)
+ * 		.dijitEditorHover .dijitEditorIFrameContainer/dijitEditorIFrame - styles when mouse hover on the container
+ * 
+ * 3. focused Editor iframe container (ie, mouse focus on the editor pane)
+ * 		.dijitEditorFocused .dijitEditorIFrameContainer/dijitEditorIFrame - styles when container focused
+ * 
+ * 3. disabled Editor iframe container 
+ * 		.dijitEditorDisabled - editor's inner iframe container disable status styles: background, border
+ */
+.biotapestry .dijitEditorIFrameContainer {
+  padding: 3px 3px 1px 10px;
+}
+.biotapestry .dijitEditorIFrame {
+  background-color: #ffffff;
+}
+.biotapestry .dijitEditor {
+  border: 1px solid #727272;
+}
+.biotapestry .dijitEditor .dijitEditorIFrameContainer {
+  background-color: #ffffff;
+  background-repeat: repeat-x;
+}
+.biotapestry .dijitEditorHover .dijitEditorIFrameContainer,
+.biotapestry .dijitEditorHover .dijitEditorIFrameContainer .dijitEditorIFrame {
+  background-color: #8c9fbd;
+}
+.biotapestry .dijitEditorFocused .dijitEditorIFrameContainer,
+.biotapestry .dijitEditorFocused .dijitEditorIFrameContainer .dijitEditorIFrame {
+  background-color: #ffffff;
+}
+.biotapestry .dijitEditorHover .dijitEditorIFrameContainer,
+.biotapestry .dijitEditorFocused .dijitEditorIFrameContainer {
+  background-image: -moz-linear-gradient(rgba(127, 127, 127, 0.2) 0%, rgba(127, 127, 127, 0) 2px);
+  background-image: -webkit-linear-gradient(rgba(127, 127, 127, 0.2) 0%, rgba(127, 127, 127, 0) 2px);
+  background-image: -o-linear-gradient(rgba(127, 127, 127, 0.2) 0%, rgba(127, 127, 127, 0) 2px);
+  background-image: linear-gradient(rgba(127, 127, 127, 0.2) 0%, rgba(127, 127, 127, 0) 2px);
+}
+/* Disabled */
+.biotapestry .dijitEditorDisabled {
+  border: 1px solid #9a9a9a;
+  color: #323033;
+}
+.biotapestry .dijitDisabled .dijitEditorIFrame,
+.biotapestry .dijitDisabled .dijitEditorIFrameContainer,
+.biotapestry .dijitDisabled .dijitEditorIFrameContainer .dijitEditorIFrame {
+  background-color: #a19ca2;
+  background-image: none;
+}
