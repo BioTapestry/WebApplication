@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -170,22 +170,24 @@ define([
 		// Returns true if there was a selection change, false if not.
 		//
 		_compareSelections: function(newSelex,oldSelex) {
-			if(utils.objectPropertyCount(newSelex) !== utils.objectPropertyCount(oldSelex)) {
+			if(Object.keys(newSelex).length !== Object.keys(oldSelex).length) {
 				return true;
 			} 
 			for(var i in newSelex) {
-				if(!oldSelex[i]) {
-					return true;
-				} 
-				if(oldSelex[i].getType() === "linkage") {
-					if(!(oldSelex[i].segments && newSelex[i].segments)) {
+				if(newSelex.hasOwnProperty(i)) {
+					if(!oldSelex[i]) {
 						return true;
-					}
-					if(oldSelex[i].segments.length !== newSelex[i].segments.length) {
-						return true;
-					}
-					if(_.difference(oldSelex[i].segments,newSelex[i].segments).length > 0) {
-						return true;
+					} 
+					if(oldSelex[i].getType() === "linkage") {
+						if(!(oldSelex[i].segments && newSelex[i].segments)) {
+							return true;
+						}
+						if(oldSelex[i].segments.length !== newSelex[i].segments.length) {
+							return true;
+						}
+						if(_.difference(oldSelex[i].segments,newSelex[i].segments).length > 0) {
+							return true;
+						}
 					}
 				}
 			}
@@ -320,7 +322,7 @@ define([
 		_updateStatesForSelection: function(nodes) {
 			var self=this;
 			require(["controllers/StatesController"],function(StatesController){
-				if(nodes && (nodes.length > 0 || utils.objectPropertyCount(nodes) > 0)) {
+				if(nodes && (nodes.length > 0 || Object.keys(nodes).length > 0)) {
 					StatesController.setState(self.canvasStates_.SELECT_NONE,true);
 					StatesController.setState(self.canvasStates_.ZOOM_TO_ALL_SELECTED,true);
 					StatesController.setState(self.canvasStates_.ZOOM_TO_CURR_SELECTED,(self.selSetTraversalIdx_ !== null));
@@ -503,11 +505,11 @@ define([
 			this._centerOnSel("prev");
 		},		
 		
-		selectNodesOnCanvasAndZoom: function(nodes,appendTo) {
+		selectNodesOnCanvasAndZoom: function(nodes,appendTo,focusCanvas) {
 			var self=this;
 			require(["views/BioTapestryCanvas"],function(BTCanvas){
 				self.selectNodes(nodes,appendTo).then(function(){
-					BTCanvas.zoomToSelected(self.cnvContainerDomNodeId_);
+					BTCanvas.zoomToSelected(self.cnvContainerDomNodeId_,focusCanvas);
 				});
 			});
 		},
@@ -737,10 +739,17 @@ define([
 		//
 		//
 		reload: function() {
+			var self=this;
+			
 			this.selectNodes();
+			var models = Object.keys(this.ArtboardModels_);
 			this.ArtboardModels_ = {
 				default_: new ArtboardModel({modelId_: "default_"})
-			};			
+			};
+			
+			require(["views/BioTapestryCanvas"],function(BTCanvas){
+				BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).flushRendererCache(models);	
+			});
 			
 			this.currentModel_ = "default_";
 			

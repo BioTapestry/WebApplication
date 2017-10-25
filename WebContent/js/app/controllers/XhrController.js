@@ -40,7 +40,7 @@ define([
 						asyncRequest.resolve(parsedResponse);
 					} catch(e) {
 						asyncRequest.reject({status: "500", reply: e});
-						console.debug("[ERROR] In XhrRequest: " + e);
+						console.error("[ERROR] In XhrRequest: " + e);
 					}
 				} else {
 					asyncRequest.resolve({text: response.text});

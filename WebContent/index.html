@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- 
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -32,7 +32,6 @@
     
 </head>
 <body class="biotapestry">
-
 	<noscript>
     	<style>
 			#loadingOverlay { display: none !important; }
@@ -66,7 +65,11 @@
     	};
     	
     	if(!console.debug) {
-    		console.debug = function(msg){console.log(msg)};
+    		console.debug = function(msg){
+    			for(var i=0; i < arguments.length; i++) {
+   					console.log(arguments[i]);
+   				}
+   			};
     	}
 	</script>
 	<script src="js/lib/utils/underscore.js"></script>

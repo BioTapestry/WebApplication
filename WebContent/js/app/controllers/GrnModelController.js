@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -76,7 +76,8 @@ define([
 			return this.currentModel_;
 		},
 		// Any time the model is set, a large number of events take place
-		_currentModel_Setter: function(modelId,state,overlay,pathSet) {
+		_currentModel_Setter: function(modelId,state,overlay,pathSet,sliderChange) {
+			
 			// If this change in model is not part of a user path, but we were on
 			// one, clear out the path state
 			require(["controllers/StatesController","dijit"],function(StatesController,dijit){
@@ -96,17 +97,26 @@ define([
 			
 			this._setModel(modelId,state,overlay).then(function(confirmation){
 				if(self.currentModel_ === "default_" || modelId === "default_") {
-					self.currentModel_ = self.splitModelId(confirmation.currModel).modelId;
-					if(!self.GrnModels_[self.currentModel_].vfgParent_) {
-						self.GrnModels_[self.currentModel_] = self.GrnModels_.default_;
-						self.GrnModels_[self.currentModel_].modelId_ = self.currentModel_;	
+					// This ID could be a Dynamic Proxy, which will come back in model-state form and not
+					// model tree form. Split it up, just in case.
+					var splitId = self.splitModelId(confirmation.currModel);
+					self.currentModel_ = splitId.modelId;
+					modelId = splitId.modelId;
+					
+					if(!self.GrnModels_[modelId] || !self.GrnModels_[modelId].vfgParent_) {
+						self.GrnModels_[modelId] = self.GrnModels_.default_;
+						self.GrnModels_[modelId].modelId_ = self.currentModel_;	
 					}
+					self.GrnModels_[modelId].state_ = splitId.state;
+					
 					delete self.GrnModels_.default_;
-					require(["controllers/ModelTreeController"],function(ModelTreeController){ 
-						ModelTreeController.selectNodeOnTree(confirmation.currModel);	
+					
+					require(["views"],function(BTViews){ 
+						BTViews.selectOnTree(modelId);	
 					});	
 				}
 				
+				// *Any* model change causes the pathing window/dialog to close
 				require(["controllers/WindowController"],function(WindowController){
 					WindowController.closeWindow("pathing");
 				});
@@ -114,10 +124,11 @@ define([
 				if(confirmation.currModel === confirmation.requested) {
 					self.currentModel_ = modelId;
 				} else if(confirmation.requested !== "default_") {
-					throw new Error("[ERROR] Requested model and confirmed model do not match!");
+					throw new Error("[ERROR] Requested model and confirmed model do not match! Requested " 
+						+ confirmation.requested + " but received "+confirmation.currModel);
 				}
 				
-				var model = self.GrnModels_[self.currentModel_];
+				var model = self.GrnModels_[modelId];
 
 				// If we have an expired model, or don't have it, we need to fetch, build, and load it.
 				if(!(model && model.drawingObjects_ &&  model.drawingObjects_[model.state_]
@@ -129,7 +140,7 @@ define([
 							self.asyncModelLoader_.reject("[ERROR] Model mismatch! Requested " + model.getModelId() + " but got " + modelData.modelID);	
 						}
 						self.asyncGrnModelBuilder_.promise.then(function(){
-							self.loadModel_(self.currentModel_,modelData,confirmation);	
+							self.loadModel_(modelId,modelData,confirmation);
 							
 							// Model messages impact other elements of the layout, so
 							// register their update to trigger *after* the load is complete
@@ -169,10 +180,17 @@ define([
 									statemax: model.stateMax_,
 									statelength: model.states_.length,
 									currstate: model.state_,
-									model: self.currentModel_
+									model: modelId
 								},true);
 							} else {
-								self.syncTimeSlider(model.state_);
+								// If the change came *from* the time slider we don't need to sync it
+								// and in fact attempting to do so can, due to UI or server delays,
+								// result in the model setting jumping back and forth. However, if
+								// this change is from an outside command, be sure to sync if we're
+								// a dynamic proxy
+								if(!sliderChange) {
+									self.syncTimeSlider(model.state_);
+								}
 							}
 						} else {
 							LowerLeftComponents.disable("timeSlider");
@@ -224,24 +242,18 @@ define([
 		// loadModel_
 		////////////////////////////////
 		//
-		// Given a modelID, drawing data object, and the confirmation response from the
-		// server, load the drawing object (and model annotation image, if provided)
-		// onto the corresponding GrnModel object.
+		// Given a modelID, drawing data object, and the confirmation response from the server, load the drawing 
+		// object (and model annotation image, if provided) onto the corresponding GrnModel object.
 		//
 		loadModel_: function(modelId,modelData,confirmation) {
-			var self=this;
 			var model = this.GrnModels_[modelId];
 			
 			if(confirmation && confirmation.modelAnnotImage) {
 				model.annotationImages_[model.state_] = confirmation.modelAnnotImage;
 			}
 			
-			model.drawingObjects_[model.state_] = modelData;
-										
+			model.drawingObjects_[model.state_] = modelData;					
 			model.message_ = (modelData.displayText.modelText ? modelData.displayText.modelText : "");
-			
-			// load any lower component necessities
-			
 			model.expiry_ = Date.now() + BASE_CACHE_EXPIRATION;			
 		},
 		
@@ -271,8 +283,7 @@ define([
 		// setFullBounds
 		/////////////////////////////
 		//
-		// Special set moethod for the completeModelBounds_ object which
-		// translates server-side coordinate naming conventions to 
+		// Special set moethod for the completeModelBounds_ object which translates server-side coordinate naming conventions to 
 		// webclient names
 		//
 		setFullBounds: function(bounds) {
@@ -290,8 +301,7 @@ define([
 		// setModelOverlay
 		//////////////////////////////
 		//
-		// Overlay values are set via the Overlay widget, which will then update
-		// the ArtboardController with the new value
+		// Overlay values are set via the Overlay widget, which will then update the ArtboardController with the new value
 		//
 		setModelOverlay: function(overlayVal) {
 			var self=this;
@@ -313,8 +323,8 @@ define([
 		//////////////////////////
 		//
 		// Set the model and wait on the asyncModelLoader to resolve
-		setModel: function(modelId,state,overlay,onPath) {
-			this.set("currentModel_",modelId,state,overlay,onPath);
+		setModel: function(modelId,state,overlay,onPath,sliderChange) {
+			this.set("currentModel_",modelId,state,overlay,onPath,sliderChange);
 			return this.asyncModelLoader_.promise;
 		},
 		
@@ -322,8 +332,7 @@ define([
 		// syncTimeSlider
 		///////////////////////////////////
 		//
-		// Synchronize the time slider's displayed value, because we had a state
-		// change come from another source
+		// Synchronize the time slider's displayed value, because we had a state change come from another source
 		//
 		syncTimeSlider: function(state) {
 			var self=this;
@@ -347,11 +356,9 @@ define([
 		// getModel
 		///////////////////////////////////
 		//
-		// Get a copy of the GrnModel object corresponding to
-		// this modelId. If we don't have that model yet, or
-		// it has expired, request a copy from the server. Because
-		// this can be an asynchronous event, we return a Deferred.promise
-		// for registering a callback
+		// Get a copy of the GrnModel object corresponding to this modelId. If we don't have that model yet, or
+		// it has expired, request a copy from the server. Because this can be an asynchronous event, we return a 
+		// Deferred.promise for registering a callback
 		//
 		getModel: function(modelId) {
 			var asyncLoader = new Deferred();
@@ -391,41 +398,52 @@ define([
 			var asyncReload = new Deferred();
 			
 			var self=this;
-			
-			var models = Object.keys(self.GrnModels_);
-			
-			// Save out the current model, because we're going to reload that one
-			if(isNewSession) {
-				models.splice(models.indexOf(self.currentModel_),1);
-			}
-			
-			require(["views/BioTapestryCanvas","widgets/LowerLeftComponents"],function(BTCanvas,LowerLeftComponents){
-				if(!isNewSession) {
-					LowerLeftComponents.clearAll();
-				}
-				BTCanvas.getBtCanvas(self.cnvContainerNodeId_).flushRendererCache(models);
+			var currModel = self.GrnModels_[self.currentModel_];
+						
+			require(["widgets/LowerLeftComponents"],function(LowerLeftComponents){				
 				self.GrnModels_ = {
 					default_: new GrnModel({modelId_: "default_",state_: 0})
 				};
+				if(!isNewSession) {
+					LowerLeftComponents.clearAll();
+				} else {
+					self.GrnModels_[self.currentModel] = currModel;					
+				}
+
 				asyncReload.resolve();
 			});	
 			
 			return asyncReload.promise;
 		},
 		
-		
-		// Get the GrnModel object which is named in currentModel_
-		// as a promise from a Deferred(); this allows a request for 
-		// the model to not block the UI if the model is still loading
+		////////////////////////////////
+		// getCurrentModel
+		////////////////////////////////
+		//
+		// Get the GrnModel object which is referenced by currentModel_ as the result in a promise from a Deferred(); 
+		// this prevents a request for the model from blocking if the model is still loading
+		//
 		getCurrentModel: function() {
 			return this.asyncModelLoader_.promise;
 		},	
 		
+		/////////////////////
+		// setWatch
+		//////////////////
+		//
 		// Set a watch callback on a property of this GrnModelController
+		//
 		setWatch: function(thisProp,thisWatcher) {
 			return this.watch(thisProp,thisWatcher);
 		},
 				
+		////////////////////////////////
+		// expireAllAndReloadCurrent
+		////////////////////////////////
+		//
+		// Some Editor actions will require the entire model cache to be expired, and for the current model
+		// to be reloaded.
+		// 
 		expireAllAndReloadCurrent: function() {
 			var self=this;
 			for(var i in self.GrnModels_) {
@@ -454,11 +472,9 @@ define([
 		// buildModels
 		////////////////////////////////////
 		//	
-		// Bootstrap the GrnModelController's GrnModels_ object, which is a list of all
-		// models available in the Model Tree.
+		// Bootstrap the GrnModelController's GrnModels_ object, which is a list of all models available in the Model Tree.
 		//
 		buildModels: function(modelArray,parentId,networkParams){
-						
 			var self=this;
 			// Only build the model set if this is an initial loading of a model array; after that
 			// the model set is managed by the this controller in response to user actions (deleting models,
@@ -509,15 +525,26 @@ define([
 			}
 		},		
 				
+		
+		///////////////////////////////////////
+		// drawingObjIsCached
+		///////////////////////////////////////
+		// 
 		// Parse the model ID given and then determine if it is currently cached by the GrnModelController
+		//
 		drawingObjIsCached: function(modelId) {
 			var modelAndState = this.splitModelId(modelId);
 			return !!(this.GrnModels_[modelAndState.modelId] && this.GrnModels_[modelAndState.modelId].getCached(modelAndState.state));
 		},
 		
+		//////////////////////////////////
+		// setCachedInRenderer
+		///////////////////////////////
+		//
 		// If we are invalidating the cache (cacheStatus === false), we also need the Canvas to tell the Renderer to
 		// empty its cache for these models.
 		// TODO: watch condition from the Renderer to the GrnModel's cache status?
+		// 
 		setCachedInRenderer: function(modelId,cacheStatus) {
 			var self=this;
 			var modelAndState = this.splitModelId(modelId);
@@ -529,6 +556,14 @@ define([
 			}
 		},
 		
+		///////////////////////////
+		// splitModelId
+		//////////////////////////
+		//
+		// Dynamic Proxy IDs are a combined ID indicating the parent model and current state, and so
+		// do not track with the model tree IDs. When we receive one, we have to split it out into
+		// the model ID and the state ID
+		// 
 		splitModelId: function(modelId) {
 			var mainModelId = modelId, state = 0;
 			if(modelId.indexOf(DYNAMIC_PROXY_PREFIX)===0 && (modelId.indexOf(":ALL",modelId.length-":ALL".length) === -1)) {
@@ -538,6 +573,12 @@ define([
 			return {modelId: mainModelId, state: state};
 		},
 		
+		////////////////////////////////
+		// _setModel
+		////////////////////////////////
+		//
+		// Set the model, and if applicable state and overlay, on the server
+		// 
 		_setModel: function(modelId,state,overlay) {
 			var self=this;
 			var loadAsync = new Deferred();
@@ -549,7 +590,6 @@ define([
 				if(state !== null && state !== undefined) {
 					this.GrnModels_[modelId].set("state_",state);
 				}
-				
 				modelId = this.GrnModels_[modelId].getModelId();
 			}
 			
@@ -586,11 +626,16 @@ define([
 					}
 				});				
 			});
-			
 
 			return loadAsync.promise;			
 		},
 		
+		////////////////////////////
+		// _fetchModel
+		////////////////////////////
+		//
+		// Retrieve the model represented by modelId from the server
+		//
 		_fetchModel: function(modelId) {
 			var loadAsync = new Deferred();
 
@@ -609,6 +654,11 @@ define([
 			return loadAsync.promise;
 		},
 		
+		/////////////////////////////////////
+		// _buildModelChildren
+		/////////////////////////////////////
+		//
+		//
 		_buildModelChildren: function(modelArray,parentId,depth) {
 			var self=this;
 			var hasDynamicProxy = false;
@@ -620,21 +670,39 @@ define([
 			return hasDynamicProxy;
 		},
 		
+		///////////////////////////
+		// _buildThisModel
+		//////////////////////////
+		//
+		//
 		_buildThisModel: function(model,parentId,depth) {
 			if(depth === undefined || depth === null) {
 				depth = 0;
 			}
-			this.GrnModels_[model.ID] = new GrnModel({
-				type_: model.modelType,
-				vfgParent_: parentId,
-				modelId_: model.ID,
-				expiry_: Date.now() + BASE_CACHE_EXPIRATION,
-				state_: 0,
-				message_: null,
-				overlayDefs_: model.overlayDefs,
-				depth_: depth
-			});
-									
+			
+			// Don't overwrite an already present model which is valid (has drawingObjects and 
+			// isn't expired), just update some of it
+			if(!this.GrnModels_[model.ID]) {
+				this.GrnModels_[model.ID] = new GrnModel({
+					type_: model.modelType,
+					vfgParent_: parentId,
+					modelId_: model.ID,
+					expiry_: Date.now() + BASE_CACHE_EXPIRATION,
+					state_: 0,
+					message_: null,
+					overlayDefs_: model.overlayDefs,
+					depth_: depth
+				});
+			} else {
+				this.GrnModels_[model.ID].type_ = model.modelType;
+				this.GrnModels_[model.ID].vfgParent_ = parentId;
+				this.GrnModels_[model.ID].expiry_ = Date.now() + BASE_CACHE_EXPIRATION;
+				this.GrnModels_[model.ID].state_ = 0;
+				this.GrnModels_[model.ID].message_ = null;
+				this.GrnModels_[model.ID].overlayDefs_ = model.overlayDefs;
+				this.GrnModels_[model.ID].depth_ = depth;
+			}
+										
 			if(model.modelType === "DYNAMIC_PROXY") {
 				this.GrnModels_[model.ID].states_ = model.timeRange.asSortedSet;
 				this.GrnModels_[model.ID].state_ = model.timeRange.min;
@@ -662,8 +730,7 @@ define([
 				default_: new GrnModel({modelId_: "default_",state_: 0})
 			};
 			
-			// Setting the model valyue will trigger the rest of the loading
-			// process
+			// Setting the model value will trigger the rest of the loading process
 			this.set("currentModel_","default_");
 		}
 	});

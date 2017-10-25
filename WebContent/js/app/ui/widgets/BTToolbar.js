@@ -211,7 +211,7 @@ define([
 									name: item.name,
 									onClick: (
 										ActionCollection[item.keyType + "_" + item.key] || 
-					    				function(e){console.debug("No Action available for onClick of " + item.desc + ": " + item.keyType + "_" + item.key);}
+					    				function(e){console.warn("No Action available for onClick of " + item.desc + ": " + item.keyType + "_" + item.key);}
 					    			),
 									typeAndKey: item.keyType + "_" + item.key
 								});

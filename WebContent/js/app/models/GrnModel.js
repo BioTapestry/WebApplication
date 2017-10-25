@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -137,6 +137,22 @@ define([
 		
 		overlayDefs_: null,
 		
+		/////////////////////////
+		// toString()
+		////////////////////////
+		//
+		// A simple method which shows basic model properties
+		// in a string format, but does not do a full-depth
+		// stringification
+		//
+		toString: function() {
+			return (
+				"ID: "+this.modelId_
+				+" state: "+this.state_
+				+" drawing obj: "+(Object.keys(this.drawingObjects_).length > 0 ? Object.keys(this.drawingObjects_) : "NO DRAWING OBJ")
+				+" overlay: "+this.overlay_
+			);
+		},
 		
 		constructor: function(params) {
 			declare.safeMixin(this,params);

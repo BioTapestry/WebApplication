@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -22,9 +22,11 @@ define([
 	"widgets/BTMenuBar",
 	"widgets/LowerLeftComponents",
 	"widgets/ModelTree",
+	"controllers/XhrController",
 	"static/XhrUris",
 	"views/GrnModelMessages",
 	"app/utils",
+	// Dojo Dependencies
 	"dijit/layout/BorderContainer", 
 	"dijit/layout/ContentPane", 
 	"dojo/Deferred",
@@ -34,15 +36,19 @@ define([
     "dojo/dom-style",
     "dojo/_base/array",
     "dojo/query",
+    "dojo/dom-attr",
+    "dijit/focus",
 	"dojo/domReady!"
 ],function(
 	BTToolbar,
 	BTMenuBar,
 	LowerLeftComponents,
 	ModelTree,
+	XhrController,
 	XhrUris,
 	GrnModelMsgs,
 	utils,
+	// Dojo Dependencies
 	BorderContainer,
 	ContentPane,
 	Deferred,
@@ -51,7 +57,9 @@ define([
 	dom,
 	domStyle,
 	DojoArray,
-	query
+	query,
+	domAttr,
+	focus
 ){
 	
 	var location = window.location.href.match(/pathing|expdata|perturb/g);
@@ -62,129 +70,171 @@ define([
 	}
 
 	var MIN_SIZE_LEFT_CONTAINER = 270;
-	var leftContainerSize = MIN_SIZE_LEFT_CONTAINER;
+	var _leftContainerSize = MIN_SIZE_LEFT_CONTAINER;
 	
 	var CANVAS_CONTAINER_NODE_ID = "grn";
 	var CANVAS_WRAPPER_NODE_ID = "grnWrapper";
-	
+
 	// Default to viewer mode unless the server tells us otherwise
-	var clientMode_ = "VIEWER";
-	var availableMenus_ = {
+	var _clientMode = "VIEWER";
+	var _availableMenus = {
 		appMenus: null
 	};
 		
 	// These are present in both editor and viewer mode
-	var bioTapestryToolbar_ = new BTToolbar();
-	var bioTapestryModelTree_ = new ModelTree();
+	var _bioTapestryToolbar = new BTToolbar();
+	var _bioTapestryModelTree = null;
 	
-	// This is only preset in editor mode
-	var bioTapestryMenuBar_;
+	// This is only present in editor mode
+	var _bioTapestryMenuBar;
 	
+	// UI Variables
+	var _grn = null, _applicationPane = null, _left = null, _leftUpperComponent = null;
+		
+	///////////////// Helper Methods /////////////////
+	
+	// This function constructs the file menu (if there is one), the toolbar, and the top
+	// display region. The contents of this segment of the UI are conditional on the client mode, 
+	// so it is run just before load time
+	function buildUpperLayout() {
+		var asyncLoad = new Deferred();
+		if(_availableMenus.appMenus && _availableMenus.appMenus.MenuBar) {
+			_bioTapestryMenuBar = new BTMenuBar(XhrUris.menubar);
+			_bioTapestryMenuBar.getFileMenu().then(function(fileMenu){
+		        _topPane.addChild(fileMenu);
+		    },function(err){
+		    	console.error("[ERROR] Couldn't load the File Menu!");
+		    	asyncLoad.reject();
+		    }).then(function() {
+		    	if(_availableMenus.appMenus && _availableMenus.appMenus.ToolBar) {
+			    	_bioTapestryToolbar.loadButtons().then(function() {
+			            _topPane.addChild(_bioTapestryToolbar.getToolbar());
+			            _applicationPane.resize();
+			            asyncLoad.resolve();
+			        },function(err){
+				    	console.error("[ERROR] Couldn't load the Toolbar!");
+				    	asyncLoad.reject();
+				    }); 
+		    	} else {
+		    		_applicationPane.resize();
+		    		asyncLoad.resolve();
+		    	}
+		    }); 
+		} else {
+			if(_availableMenus.appMenus && _availableMenus.appMenus.ToolBar) {
+				_bioTapestryToolbar.loadButtons().then(function() {
+		            _topPane.addChild(_bioTapestryToolbar.getToolbar());
+		            _applicationPane.resize();
+		            asyncLoad.resolve();
+		        },function(err){
+			    	console.error("[ERROR] Couldn't load the toolbar buttons!");
+			    	asyncLoad.reject();
+			    });
+			} else {
+				asyncLoad.resolve();
+			}
+		}
+		return asyncLoad.promise;
+	};
+	
+	// This will request the model tree, which contains all of our GRN model hierarchy
+	// information and will be used to populate both the GrnModelController and the 
+	// ModelTree
+    function loadModelsAndTree() {
+    	var asyncLoad = new Deferred();
+        XhrController.xhrRequest(XhrUris.modeltree).then(function(data) {
+    		
+        	_bioTapestryModelTree = new ModelTree({rawTreeData: data});
+        	_leftUpperComponent.addChild(_bioTapestryModelTree);
+        	
+    		require(["controllers/GrnModelController"],function(GrnModelController){
+    			GrnModelController.setFullBounds(data.allModelBounds);
+    			GrnModelController.set("initialZoomMode_",data.firstZoomMode);
+    			GrnModelController.set("navZoomMode_",data.navZoomMode);
+    			GrnModelController.buildModels(
+    				data.root.childNodes
+    				,"root"
+    				,{hasImages:data.hasImages,hasOverlays:data.hasOverlays,timeSliderDef: data.timeSliderDef}
+    			);
+    			asyncLoad.resolve(data);
+    		});
+        });
+        return asyncLoad.promise;
+    };
+    
+	function _resizeLeftContainer(newSize) {
+		if(newSize !== undefined && newSize !== null) {
+			if(newSize.w < MIN_SIZE_LEFT_CONTAINER) {
+				newSize.w = MIN_SIZE_LEFT_CONTAINER;
+			}
+			_grn.resize({w: _grn.w-(newSize.w-_left.w)});
+			_left.resize({w: newSize.w});
+			_applicationPane.layout();
+		}
+	};
+    
+    ////////////////////////// UI Construction ///////////////////////////
+        
 	// This will be the primary container of our application.
-	var applicationPane = new BorderContainer({
+	_applicationPane = new BorderContainer({
 		id: "app_container"
 	});
 	
-	//////////////////////////////////
+	//////////////////////////
 	// Top region pane setup
-	/////////////////////////////////
+	//////////////////////////
 	
-	var topPane = new ContentPane({
+	var _topPane = new ContentPane({
 		region: "top",
 		id: "top_pane"
 	});
 	
 	require(["dojo/text!./customizations/Title.html"],function(TitleContent){
-		topPane.set("innerHTML","<div id=\"header_pane\"><span>" + TitleContent + "</span></div>");
+		_topPane.set("innerHTML","<div id=\"header_pane\"><span>" + TitleContent + "</span></div>");
 		// Strip any tags in the title file
 		document.title=TitleContent.replace(/<[^<]+>/ig,"");
 	});
 	
 	
 	require(["dojo/aspect"],function(aspect){
-	    aspect.after(applicationPane,"resize",function(){
+	    aspect.after(_applicationPane,"resize",function(){
 	    	if(dom.byId("top_pane")) {
 	    		domStyle.set(dom.byId("header_pane"),"width",domStyle.get(dom.byId("top_pane"),"width"));	
 	    	}
 	    });		
 	});
-	
-	// This will be conditional on the client mode, so it is run just before load time
-	function buildUpperLayout() {
-		if(availableMenus_.appMenus && availableMenus_.appMenus.MenuBar) {
-			bioTapestryMenuBar_ = new BTMenuBar(XhrUris.menubar);
-			return bioTapestryMenuBar_.getFileMenu().then(function(fileMenu){
-		        topPane.addChild(fileMenu);
-		    }).then(function() {
-		    	if(availableMenus_.appMenus && availableMenus_.appMenus.ToolBar) {
-			    	bioTapestryToolbar_.loadButtons().then(function() {
-			            topPane.addChild(bioTapestryToolbar_.getToolbar());
-			            applicationPane.resize();
-			        }); 
-		    	} else {
-		    		applicationPane.resize();
-		    	}
-		    }); 
-		} else {
-			if(availableMenus_.appMenus && availableMenus_.appMenus.ToolBar) {
-				return bioTapestryToolbar_.loadButtons().then(function() {
-		            topPane.addChild(bioTapestryToolbar_.getToolbar());
-		            applicationPane.resize();
-		        });
-			} else {
-				var resolved = new Deferred();
-				resolved.resolve();
-				return resolved.promise;
-			}
-		}
-	};
-	
-
+    
     
 	//////////////////////////////////
 	// Left region pane setup
 	/////////////////////////////////
-    //
+
     // Because we want to have a splitter between the upper and lower components
     // of this pane, we'll need to make an outer wrapper that is also a BorderContainer
-    //
-    var left = new BorderContainer({
+    _left = new BorderContainer({
         region: "left",
         id: "left_wrapper",
         splitter: true,
     	gutters: false,
-        minSize: leftContainerSize
+        minSize: _leftContainerSize
     });
     
-    var leftUpperComponent = new ContentPane({
+    _leftUpperComponent = new ContentPane({
     	region: "center",
     	id: "left_upper_component"
     });
-        
-    var buildModelTree_ = bioTapestryModelTree_.getModelHierarchyTree().then(function(modelTree){
-    	leftUpperComponent.addChild(modelTree);
-        // Squelch all default context menuing on the DIV container for the 
-        // ModelTree
-    	modelTree.own(
-        	on(leftUpperComponent,"contextmenu",function(e){
-        		e.preventDefault();      		
-        	})
-        );
-        
-        bioTapestryModelTree_.setTreeWidget();
-        
-        modelTree.startup();
-        
-    });
-   
-    left.addChild(leftUpperComponent);
     
-    left.addChild(LowerLeftComponents.getContainer());
+    var _buildModels = loadModelsAndTree();
+       
+    _left.addChild(_leftUpperComponent);
+    
+    _left.addChild(LowerLeftComponents.getContainer());
 
-	//////////////////////////////////
+	//////////////////////////////
 	// Center region pane setup
-	/////////////////////////////////
-    var grn = new ContentPane({
+	/////////////////////////////
+    
+    _grn = new ContentPane({
     	region: "center",
     	id: CANVAS_WRAPPER_NODE_ID
     });
@@ -193,66 +243,93 @@ define([
 	// Bottom region pane setup
 	/////////////////////////////////
     
-    var footer_wrapper = new BorderContainer({
+    var _footerWrapper = new BorderContainer({
     	region: "bottom",
     	id: "footer_wrapper",
     	splitter: true,
     	minSize: 50
     });
     
-    var ftr = new ContentPane({
+    var _ftr = new ContentPane({
     	region: "center",
     	id: "footer_pane"
     }); 
     
-    footer_wrapper.addChild(ftr);
+    _footerWrapper.addChild(_ftr);
     
-    ftr.own(GrnModelMsgs.setMessageWatch(
+    _ftr.own(GrnModelMsgs.setMessageWatch(
 		function(name,oldval,newval) {
-			ftr.set("content",newval);
-			applicationPane.resize();
+			_ftr.set("content",newval);
+			_applicationPane.resize();
 		}
     ));
 
-    applicationPane.addChild(topPane);
-    applicationPane.addChild(grn);
-    applicationPane.addChild(left);
-    applicationPane.addChild(footer_wrapper);
+    _applicationPane.addChild(_topPane);
+    _applicationPane.addChild(_grn);
+    _applicationPane.addChild(_left);
+    _applicationPane.addChild(_footerWrapper);
     
-	var loadAsync = null;
-	
-	function _resizeLeftContainer(newSize) {
-		if(newSize !== undefined && newSize !== null) {
-			if(newSize.w < MIN_SIZE_LEFT_CONTAINER) {
-				newSize.w = MIN_SIZE_LEFT_CONTAINER;
-			}
-			grn.resize({w: grn.w-(newSize.w-left.w)});
-			left.resize({w: newSize.w});
-			applicationPane.layout();
-		}
-	};
+    // We need to make sure any click inside the GRN Model area moves focus to it,
+    // otherwise we get bizarre behavior and can't use up/down arrow to scroll
+    // the model
+    domAttr.set(_grn.domNode,"tabindex",0);
+    _grn.own(on(_grn,"click",function(e){
+    	focus.focus(_grn.domNode);
+    }));
+    
+    // Bind the zoom in and out event for the grnWrapper to -_ and +=
+    _grn.own(on(_grn,"keydown",function(e) {
+    	require(["controllers/ActionCollection"],function(ActionCollection){
+    		if(!e.altKey && !e.ctrlKey) {
+    			var code = ((e.keyCode === 0 || e.keyCode === undefined) ? e.charCode : e.keyCode);
+		    	if(utils.isPlusEquals(code)) {
+		    		ActionCollection.MAIN_ZOOM_IN(e);
+		    	} else if(utils.isMinusUs(code)) {
+		    		ActionCollection.MAIN_ZOOM_OUT(e);
+		    	}
+    		}
+    	});
+    }));   
+    
+    var _zoomWarnHandle = on(window,"keydown",function(e){
+    	require(["controllers/ActionCollection"],function(ActionCollection){
+    		if(e.ctrlKey) {
+    			var code = ((e.keyCode === 0 || e.keyCode === undefined) ? e.charCode : e.keyCode);
+		    	if(utils.isPlusEquals(code) || utils.isMinusUs(code)) {
+		    		ActionCollection.MAIN_ZOOM_WARN(e);
+		    		_zoomWarnHandle.remove();
+		    	}    			
+    		}
+    	});
+    });
+    
+	var _loadAsync = null;
       
-    ////////////////// INTERFACE //////////////////
+    ////////////////// MODULE INTERFACE //////////////////
 
 	return {
+		///////////////////
+		// sessionRestart
+		//////////////////
+		//
+		// 
 		sessionRestart: function() {
-			leftContainerSize = MIN_SIZE_LEFT_CONTAINER;
-			_resizeLeftContainer({w: leftContainerSize});
-			loadAsync = new Deferred();
+			_leftContainerSize = MIN_SIZE_LEFT_CONTAINER;
+			_resizeLeftContainer({w: _leftContainerSize});
+			_loadAsync = new Deferred();
 			require(["controllers/XhrController"],function(XhrController){
 				XhrController.xhrRequest(XhrUris.init).then(function(response){
 					if(!response.result === "SESSION_READY") {
-						loadAsync.reject("Session did not return ready!");
-						throw new Error("Session did not return ready!");
+						_loadAsync.reject("[ERROR] Session did not return ready!");
+						throw new Error("[ERROR] Session did not return ready!");
 					}
 					require([
-				        "controllers/ModelTreeController",
 				        "controllers/GrnModelController",
 				        "controllers/ArtboardController",
 				        "controllers/ActionCollection",
 				        "views/BioTapestryCanvas"
 			        ],
-						function(ModelTreeController,GrnModelController,ArtboardController,ActionCollection,BtCanvas){
+						function(GrnModelController,ArtboardController,ActionCollection,BtCanvas){
 						BtCanvas.toggleWatchEvents(CANVAS_CONTAINER_NODE_ID);
 						var currentModelId = GrnModelController.get("currentModel_");
 						var currentModelState = null;
@@ -260,110 +337,128 @@ define([
 							currentModelState = model.get("state_");
 						}).then(function() {
 							GrnModelController.reloadController(true).then(function(){
-								ModelTreeController.refreshTree().then(function(){
-									ArtboardController.reloadArtboardController(CANVAS_CONTAINER_NODE_ID,true);
+								_buildModels = loadModelsAndTree();
+								_buildModels.then(function(data){
+									_bioTapestryModelTree.refresh(data);
+									ArtboardController.reloadArtboardController(CANVAS_CONTAINER_NODE_ID);
 									GrnModelController.set("currentModel_",currentModelId,currentModelState);
 									GrnModelController.getCurrentModel().then(function(){
-										GrnModelController.setCachedInRenderer(currentModelId,true);
 										BtCanvas.toggleWatchEvents(CANVAS_CONTAINER_NODE_ID);
-										ActionCollection["MAIN_ZOOM_TO_CURRENT_MODEL"]({});	
+										GrnModelController.set("currentModel_",currentModelId,currentModelState);
+										BtCanvas.canvasReady(CANVAS_CONTAINER_NODE_ID).then(function(){
+											ActionCollection["MAIN_ZOOM_TO_CURRENT_MODEL"]({});
+										});
 									}); 
-									ModelTreeController.selectNodeOnTree(currentModelId);
-									loadAsync.resolve();
-								});							
-							})}
-						);
+									_bioTapestryModelTree.selectNodeOnTree(currentModelId);
+									_loadAsync.resolve();
+								});
+							});
+						});
 					});
 				});				
 			});
-			return loadAsync.promise;
+			return _loadAsync.promise;
 		},
 		
+		///////////////////
+		// loadNewModel
+		//////////////////
+		//
+		//
 		loadNewModel: function() {
-			leftContainerSize = MIN_SIZE_LEFT_CONTAINER;
-			_resizeLeftContainer({w: leftContainerSize});
-			loadAsync = new Deferred();
+			_leftContainerSize = MIN_SIZE_LEFT_CONTAINER;
+			_resizeLeftContainer({w: _leftContainerSize});
+			_loadAsync = new Deferred();
 			require([
-		         "controllers/ModelTreeController"
 		         ,"controllers/GrnModelController"
 		         ,"controllers/ArtboardController"
 		         ,"controllers/ActionCollection"
 		         ,"views/BioTapestryCanvas"
 	         ],
-			function(ModelTreeController,GrnModelController,ArtboardController,ActionCollection,BTCanvas){
+			function(GrnModelController,ArtboardController,ActionCollection,BTCanvas){
 				BTCanvas.removeResizingAspect(CANVAS_CONTAINER_NODE_ID);
 				BTCanvas.toggleWatchEvents(CANVAS_CONTAINER_NODE_ID);
 				GrnModelController.reloadController().then(function(){
-					ModelTreeController.refreshTree().then(function(){
+					_buildModels = loadModelsAndTree();
+					_buildModels.then(function(data){
+						_bioTapestryModelTree.refresh(data);
 						ArtboardController.reloadArtboardController(CANVAS_CONTAINER_NODE_ID);
-						BTCanvas.toggleWatchEvents(CANVAS_CONTAINER_NODE_ID);
-						GrnModelController.set("currentModel_","default_");
-						GrnModelController.getCurrentModel().then(function(){
-							ActionCollection["MAIN_ZOOM_TO_CURRENT_MODEL"]({});
-							BTCanvas.makeResizingAspect(CANVAS_CONTAINER_NODE_ID);
-							loadAsync.resolve();
+						GrnModelController.setModel("default_").then(function(){
+							GrnModelController.getCurrentModel().then(function(model){
+								BTCanvas.toggleWatchEvents(CANVAS_CONTAINER_NODE_ID);
+								GrnModelController.set("currentModel_",GrnModelController.get("currentModel_"));
+								BTCanvas.canvasReady(CANVAS_CONTAINER_NODE_ID).then(function(){
+									ActionCollection["MAIN_ZOOM_TO_CURRENT_MODEL"]({});
+									BTCanvas.makeResizingAspect(CANVAS_CONTAINER_NODE_ID);
+									_loadAsync.resolve();
+								});
+							});							
 						});
 					});					
 				});
 			});
-			return loadAsync.promise;
+			return _loadAsync.promise;
 		},
 		
+		/////////////////////
+		// loadBioTapestry
+		////////////////////
+		//
+		//
 		loadBioTapestry: function(clientSettings) {
 			
 			// Parse out the client's settings (viewer/editor, available menu types)
-			clientMode_ = clientSettings.clientMode.toUpperCase();
+			_clientMode = clientSettings.clientMode.toUpperCase();
 			DojoArray.forEach(clientSettings.supportedMenus.menuTypes,function(menu) {
-				if(!availableMenus_.appMenus) {
-					availableMenus_.appMenus = {};
+				if(!_availableMenus.appMenus) {
+					_availableMenus.appMenus = {};
 				}
-				availableMenus_.appMenus[menu] = true;
+				_availableMenus.appMenus[menu] = true;
 			});
 			
 	        require(["widgets/BTContextMenus"],function(BTContextMenus){
 	        	BTContextMenus.setAvailableContextMenus(clientSettings.supportedMenus.popupTypes);
 	        });
 			
-			if(availableMenus_.appMenus.ModelTreeMenu) {
-				buildModelTree_.then(function(){
-			        require(["widgets/BTContextMenus","controllers/ModelTreeController"],function(BTContextMenus,ModelTreeController){
-			        	BTContextMenus.buildModelTreeContextMenu(ModelTreeController.getTreeRoot());
+			if(_availableMenus.appMenus.ModelTreeMenu) {
+				_buildModels.then(function(){
+			        require(["widgets/BTContextMenus"],function(BTContextMenus){
+			        	BTContextMenus.buildModelTreeContextMenu(_bioTapestryModelTree.getRoot());
 			        });
 			    });
 			}
 			
 			// Prevent this from being called more than once
-			if(!loadAsync) {
-				loadAsync = new Deferred();
+			if(!_loadAsync) {
+				_loadAsync = new Deferred();
 				
 				try {
 
-			        document.body.appendChild(applicationPane.domNode);
-			        applicationPane.startup();
+			        document.body.appendChild(_applicationPane.domNode);
+			        _applicationPane.startup();
 			        		        
 			        buildUpperLayout().then(function(){
-
-			            // After the applicationPane has started, we'll have some of our
-			            // necessary DOM elements, so we can attach things to them.
-			        	require([
-		        	         "controllers/ActionCollection"
-		        	         ,"controllers/StatesController"
-		        	         ,"controllers/ArtboardController"
-		        	         ,"controllers/GrnModelController"
-	        	         ],function(
-		        			ActionCollection,StatesController,ArtboardController,GrnModelController
-	        			){
-			        		ActionCollection.SET_CANVAS_CONTAINER_NODE_ID(CANVAS_CONTAINER_NODE_ID);
-			        		GrnModelController.set("cnvContainerNodeId_",CANVAS_CONTAINER_NODE_ID);
-			        		var grnArtboardController = ArtboardController.makeArtboardController({
-			        			cnvWrapperDomNodeId: CANVAS_WRAPPER_NODE_ID,
-			        			cnvContainerDomNodeId: CANVAS_CONTAINER_NODE_ID,
-			        			floatingArtboard:false,
-			        			delayedLoad: false,
-			        			networkModelController: "controllers/GrnModelController"
-		        			});
-			        		grnArtboardController.attachArtboard(
-		        				{
+			        	_buildModels.then(function(){
+				            // After the applicationPane has started, we'll have some of our
+				            // necessary DOM elements, so we can attach things to them.
+				        	require([
+			        	         "controllers/ActionCollection"
+			        	         ,"controllers/StatesController"
+			        	         ,"controllers/ArtboardController"
+			        	         ,"controllers/GrnModelController"
+		        	         ],function(
+			        			ActionCollection,StatesController,ArtboardController,GrnModelController
+		        			){
+				        		ActionCollection.SET_CANVAS_CONTAINER_NODE_ID(CANVAS_CONTAINER_NODE_ID);
+				        		GrnModelController.set("cnvContainerNodeId_",CANVAS_CONTAINER_NODE_ID);
+				        		var grnArtboardController = ArtboardController.makeArtboardController({
+				        			cnvWrapperDomNodeId: CANVAS_WRAPPER_NODE_ID,
+				        			cnvContainerDomNodeId: CANVAS_CONTAINER_NODE_ID,
+				        			floatingArtboard:false,
+				        			delayedLoad: false,
+				        			networkModelController: "controllers/GrnModelController"
+			        			});
+				        		grnArtboardController.attachArtboard({
 		        					zoomStates: {inState: "MAIN"+StatesController.zoomIn,outState: "MAIN"+StatesController.zoomOut},
 		        					id: "btCanvas_" + utils.makeId(),
 		        					attachLeftClickEvent: true,
@@ -373,16 +468,14 @@ define([
 		        					attachNoteEvent: true,
 		        					drawWorkspace: true,
 		        					primaryCanvas: true
-		        				}
-		        			).then(function(btArtboard){
-			        			applicationPane.own(btArtboard);
-			        		});
+		        				}).then(function(btArtboard){
+				        			_applicationPane.own(btArtboard);
+				        		});
+				        	});			        		
 			        	});
-
 			            // TODO: Fetch out CurrentState and apply it
-			            
 			        },function(err){
-			        	loadAsync.reject({type: "load", msg: "[ERROR] While performing async load of the interface: " + err});
+			        	_loadAsync.reject({type: "load", msg: "[ERROR] While performing async load of the interface: " + err});
 			        }).then(function() {
 			        	// Force a preloading of the Tooltip DOM node so it doesn't have
 			        	// a laggy insertion later.
@@ -390,18 +483,18 @@ define([
 			        	Tooltip.hide(document.body);
 			        	
 			        	// One final resize, to make sure everything is displaying properly
-			        	applicationPane.resize();
+			        	_applicationPane.resize();
 			        	
-			        	loadAsync.resolve();
+			        	_loadAsync.resolve();
 			        },function(err){
-			        	loadAsync.reject({type: "load", msg: "[ERROR] While performing async load of the interface: " + err});
+			        	_loadAsync.reject({type: "load", msg: "[ERROR] While performing async load of the interface: " + err});
 			        });
 				} catch(err) {
-					loadAsync.reject({type: "load", msg: "[ERROR] While performing async load of the interface: " + err});
+					_loadAsync.reject({type: "load", msg: "[ERROR] While performing async load of the interface: " + err});
 				}				
 			}
 	    		
-	    	return loadAsync.promise;
+	    	return _loadAsync.promise;
 		},
 		
 		resizeLeftContainer: function(newSize) {
@@ -409,30 +502,42 @@ define([
 		},
 		
 		resizeLeftLowerContainer: function(newSize) {
-			loadAsync.promise.then(function(){
+			_loadAsync.promise.then(function(){
 				LowerLeftComponents.resize(newSize);	
 			});
 		},
 		
 		resizeApplicationPane: function(newSize) {
-			loadAsync.promise.then(function(){
+			_loadAsync.promise.then(function(){
 				if(newSize !== undefined && newSize !== null) {
-					applicationPane.resize(newSize);
+					_applicationPane.resize(newSize);
 				} else {
-					applicationPane.resize();
+					_applicationPane.resize();
 				}
 			});		
+		},
+		
+		selectOnTree: function(modelId) {
+			_bioTapestryModelTree && _bioTapestryModelTree.selectNodeOnTree(modelId);
+		},
+		
+		getTreeResize: function() {
+			return _bioTapestryModelTree.getResizeDeferred();
+		},
+		
+		getTreeRoot: function() {
+			return _bioTapestryModelTree.getRoot();
 		},
 
 		updateViewStates: function(statesAndMasks) {
 			require(["controllers/StatesController","widgets/BTContextMenus"],function(StatesController,BTContextMenus){
 				StatesController.updateMasks(statesAndMasks.XPlatMaskingStatus);
-				bioTapestryModelTree_ && bioTapestryModelTree_.maskTree(statesAndMasks.XPlatMaskingStatus && statesAndMasks.XPlatMaskingStatus.modelTree);
+				_bioTapestryModelTree && _bioTapestryModelTree.maskTree(statesAndMasks.XPlatMaskingStatus && statesAndMasks.XPlatMaskingStatus.modelTree);
 				if(statesAndMasks.XPlatCurrentState) {
-					bioTapestryMenuBar_ && bioTapestryMenuBar_.updatePlaceHolderMenus(statesAndMasks.XPlatCurrentState.menuFills);
-					bioTapestryMenuBar_ && bioTapestryMenuBar_.updateMenuItemStates(statesAndMasks.XPlatCurrentState.flowEnabledStates);
-					bioTapestryToolbar_.updateToolbarState(statesAndMasks.XPlatCurrentState.flowEnabledStates,statesAndMasks.XPlatCurrentState.conditionalStates);
-					bioTapestryToolbar_.updatePlaceHolders(statesAndMasks.XPlatCurrentState.comboFills);
+					_bioTapestryMenuBar && _bioTapestryMenuBar.updatePlaceHolderMenus(statesAndMasks.XPlatCurrentState.menuFills);
+					_bioTapestryMenuBar && _bioTapestryMenuBar.updateMenuItemStates(statesAndMasks.XPlatCurrentState.flowEnabledStates);
+					_bioTapestryToolbar.updateToolbarState(statesAndMasks.XPlatCurrentState.flowEnabledStates,statesAndMasks.XPlatCurrentState.conditionalStates);
+					_bioTapestryToolbar.updatePlaceHolders(statesAndMasks.XPlatCurrentState.comboFills);
 					BTContextMenus.loadModelMenuStates(statesAndMasks.XPlatCurrentState.modelTreeState);
 				}
 			});

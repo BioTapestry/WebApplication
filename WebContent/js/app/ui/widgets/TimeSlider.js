@@ -235,7 +235,7 @@ define([
 			        		this.prevOnChange_ = new Deferred();
 			        		var theirDeferred = this.prevOnChange_;
 				        	require(["controllers/ActionCollection"],function(ActionCollection){
-				        		ActionCollection[ONCHANGE_ACTION]({modelId: model_, state: val}).then(function(){
+				        		ActionCollection[ONCHANGE_ACTION]({modelId: model_, state: val, isSliderChange: true}).then(function(){
 				        			theirDeferred.resolve();
 				        		},function(err){
 				        			theirDeferred.reject(err);
@@ -247,7 +247,7 @@ define([
 			        		this.prevOnChange_ = theirDeferred;
 			        		myDeferred.promise.then(function(){
 					        	require(["controllers/ActionCollection"],function(ActionCollection){
-					        		ActionCollection[ONCHANGE_ACTION]({modelId: model_, state: val}).then(function(){
+					        		ActionCollection[ONCHANGE_ACTION]({modelId: model_, state: val, isSliderChange: true}).then(function(){
 					        			theirDeferred.resolve();
 					        		},function(err){
 					        			theirDeferred.reject(err);

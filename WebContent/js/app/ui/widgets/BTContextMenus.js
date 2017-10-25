@@ -274,7 +274,7 @@ define([
     				menuLabel = 
     					menuLabel.substring(0,pos) + "{" + menuLabel.substring(pos,pos+1) + "}" + menuLabel.substring(pos+1);
     			} else {
-    				console.debug("Could not find " + menuData.mnem + " in " + menuLabel);
+    				console.warn("[WARNING] Could not find " + menuData.mnem + " in " + menuLabel);
     			}
     		}
     		
@@ -332,7 +332,7 @@ define([
     		    			id: menuLabel + "_menuitem_cnvctxt_" + menuData.key+ "_" + utils.makeId(),
     		    			onClick: (ActionSource[menuData.keyType + "_" + menuData.key] ? 
     		    					ActionSource[menuData.keyType + "_" + menuData.key](actionArgs) : 
-					    		function(e){console.debug("No Action available for onClick of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
+					    		function(e){console.warn("[WARNING] No Action available for onClick of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
 				    		typeAndKey: menuData.keyType + "_" + menuData.key
     		    		})
     		    	);
@@ -353,7 +353,7 @@ define([
 			    			id: menuLabel + "_chkbx_cnvctxt_" + menuData.key + "_" + utils.makeId(),
 			    			onChange: (ActionSource[menuData.keyType + "_" + menuData.key] ? 
 			    					ActionSource[menuData.keyType + "_" + menuData.key](nodeId) : 
-							    function(e){console.debug("No Action available for onChange of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
+							    function(e){console.warn("[WARNING] No Action available for onChange of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
 						    checked: (menuData.isChecked ? menuData.isChecked : false),
 						    typeAndKey: menuData.keyType + "_" + menuData.key
 			    		})

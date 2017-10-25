@@ -823,7 +823,19 @@ define([
 			
 			return _buildDialog(params);	
 		},
-		
+		// Generates the 'About' dialog based on the ABOUT definition in the DialogDefinitions module
+		makeZoomWarnDialog: function(params) {
+			if(!params) {
+				params = {};
+			}
+			params.definition = DialogDefs.getDialogDef("ZOOM_WARNING");
+			
+			if(params.cancelAction) {
+				params.definition.cancel = params.cancelAction;	
+			}
+			
+			return _buildDialog(params);
+		},		
 		// Generates the 'About' dialog based on the ABOUT definition in the DialogDefinitions module
 		makeAboutDialog: function(params) {
 			if(!params) {

@@ -1,1 +1,2 @@
 modelfile=BTWebExample.btp
+modellistfile=models.txt

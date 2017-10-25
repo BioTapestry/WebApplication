@@ -132,7 +132,7 @@ define([
 			loading.endLoading();
 		});	
 	} catch(e) {
-		console.error("Failed to start up BioTapestry Web: ");
+		console.error("[ERROR] Failed to start up BioTapestry Web: ");
 		console.error(e);
 		domConstruct.create("div",{
 			id: "error",		

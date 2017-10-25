@@ -28,7 +28,7 @@ define([
         			id: e.params.id,
         			cmdKey: e.params.cmdkey,
         			cmdClass: e.params.cmdclass,
-        			name: e.params.name,
+        			name: ((e.params.name && e.params.name.indexOf("%") >= 0) ? decodeURIComponent(e.params.name) : e.params.name),
         			linkUri: e.params.linkuri,
         			segId: e.params.segid
     			});

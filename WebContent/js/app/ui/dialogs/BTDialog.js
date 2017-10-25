@@ -85,11 +85,12 @@ define([
 		registerOnShow: function(callback,justOnce) {
 			var self=this;
 			if(callback) {
-				var afterHandler = aspect.after(this,"show",function(e){
+				var afterHandler = aspect.after(this,"show",function(promise,e){
 					if(justOnce) {
 						afterHandler.remove();	
 					}
 					callback(e);
+					return promise;
 				});
 				if(!justOnce) {
 					self.own(afterHandler);
@@ -122,7 +123,7 @@ define([
 			
 			var self=this;
 			
-			this.own(aspect.after(this,"show",function(e){
+			this.own(aspect.after(this,"show",function(promise,e){
 				
 				if(self["class"] !== "nonModal") {
 					require(["dialogs"],function(BTDialogs){
@@ -150,6 +151,7 @@ define([
 							(self.offset ? self.offset.y : 0) + "px"
 					);
 				}
+				return promise;
 			}));
 			
 			require(["dojo/on"],function(on){

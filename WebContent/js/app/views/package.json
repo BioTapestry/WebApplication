@@ -1,0 +1,32 @@
+{
+    "name": "views",
+    "description": "BioTapestry Web Client",
+    "version": "1.0",
+    "keywords": ["JavaScript", "Dojo", "Toolkit", "Dijit", "Visualization", "Gene Regulatory Networks"],
+    "maintainers": [
+    	{"name": "Suzanne Paquette"},
+    	{"name": "William Longabaugh"},
+    	{"name": "Kalle Leionen"}
+	],
+    "licenses": [{
+        "type": "AFLv2.1",
+        "url": "http://bugs.dojotoolkit.org/browser/dojox/trunk/LICENSE#L43"
+    },{
+        "type": "BSD",
+        "url": "http://bugs.dojotoolkit.org/browser/dojox/trunk/LICENSE#L13"
+    }],
+    "bugs": "https://github.com/example/issues",
+    "repositories": [{
+        "type": "git",
+        "url": "http://github.com/example.git",
+        "path": "packages/app/views"
+    }],
+    "dependencies": {
+        "dojo": "~1.9.1",
+        "dijit": "~1.9.1",
+        "dojox": "~1.9.1"
+    },
+    "main": "js",
+    "homepage": "http://www.biotapestry.org/",
+    "dojoBuild": "views.profile.js"
+}

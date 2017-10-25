@@ -198,7 +198,7 @@ define([
 				    			label: menuLabel,
 				    			id: makeWidgetId(menuLabel,"_label_id"),
 				    			onClick: (ActionCollection[menuData.keyType + "_" + menuData.key] ||  
-				    				function(e){console.debug("No Action available for onClick of " + menuLabel + "[" + menuData.keyType + "_" + menuData.key + "]");}
+				    				function(e){console.warn("[WARNING] No Action available for onClick of " + menuLabel + "[" + menuData.keyType + "_" + menuData.key + "]");}
 				    			),
 				    			typeAndKey: menuData.keyType + "_" + menuData.key
 				    		});
@@ -210,7 +210,7 @@ define([
 				    			label: menuLabel,
 				    			id: makeWidgetId(menuLabel,"_label_id"),
 				    			onChange: (ActionCollection[menuData.keyType + "_" + menuData.key] ||
-				    				function(e){console.debug("No Action available for onChange of " + menuLabel + "[" + menuData.keyType + "_" + menuData.key + "]");
+				    				function(e){console.warn("[WARNING] No Action available for onChange of " + menuLabel + "[" + menuData.keyType + "_" + menuData.key + "]");
 			    					if(focusUtil.curNode.id.indexOf("submenu_label_id") >= 0 
 			    							|| focusUtil.curNode.id.indexOf("horizontal_menu_widget") >= 0) {
 				    						focusUtil.curNode && focusUtil.curNode.blur();
@@ -236,7 +236,7 @@ define([
 						});		    			
 		    		}
 		    	} catch (e) {
-		    		console.debug("Error building the FileMenu: " + e.message);
+		    		console.error("[ERROR] Error building the FileMenu: " + e.message);
 		    	}
 		    };
 		    

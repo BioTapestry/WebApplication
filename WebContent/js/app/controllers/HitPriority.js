@@ -35,7 +35,7 @@ define([
 		"net_module_interior": 5,
 		"net_module_boundary": 0,
 		"box":2,
-		"note": 3, 
+		"note": 1, 
 		"group": 4
 	};
 	

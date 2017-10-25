@@ -159,7 +159,7 @@ define([
 		ABOUT: {
 			name: "ABOUT",
 			dialogType: "PLAIN",
-			parameters: {title: "About BioTapestry",id: "about_dialog",style: "height 750px; width: 680px;",openAt: {x: 0,y: 0}},
+			parameters: {title: "About BioTapestry",id: "about_dialog",style: "height 750px; width: 740px;",openAt: {x: 0,y: 0}},
 			dialogElementCollections: {
 				mainPane: {
 					elementType: "LAYOUT_CONTAINER",
@@ -184,12 +184,42 @@ define([
 	      	    	   	}]
 					},
 					parameters: {
-						style: "height: 730px; width: 660px;",
+						style: "height: 730px; width: 720px;",
 						gutters: "false"
 					}					
 				}
 			}
 		},
+		ZOOM_WARNING: {
+			name: "ZOOM_WARNING",
+			dialogType: "PLAIN",
+			parameters: {title: "Trying to Zoom?",id: "zoom_warning_dialog",isModal: false,style: "height 325px; width: 450px;",openAt: {x: 0,y: 0}, alwaysMove: true},
+			dialogElementCollections: {
+				mainPane: {
+					elementType: "LAYOUT_CONTAINER",
+					collectionElements: {
+						center: [{
+						   elementType: "TEXT_MESSAGE",
+						   parameters: {id: "zoom_warn_message",content: "<p>You've just used &lt;Ctrl&gt;+ or &lt;Ctrl&gt;- to zoom. Please note, this will only change the " +
+							   "<b>web browser</b>'s zoom settings (eg. font sizes and image display sizes), which can result in a 'low resolution' or blurry look for the model. " +
+							   "It does not zoom in or out of the network model itself.</p><p>To zoom in and out on the model, click anywhere on the model to focus it, and use the " +
+							   "- (minus) or + (plus) key <i>without</i> the &lt;Ctrl&gt; key.</p>"},
+						   layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+						}],
+				      	bottom: [{
+		      	    	   	elementType: "BUTTON",
+		      	    	   	parameters: {label: "OK", id: "zoom_warn_ok_btn"},
+		      	    	   	events: {click: {uiElementActions: ["DIALOG_CLOSE","BLANK_FORM"], cmdAction: "DO_NOTHING"}},
+		      	    	   	layout:{layoutParameters:{region:"bottom",ordinal:"0"},layoutType:"REGIONAL"}
+	      	    	   	}]
+					},
+					parameters: {
+						style: "height: 300px; width: 430px;",
+						gutters: "false"
+					}					
+				}
+			}
+		},		
 		EXP_DATA: {
 			name: "EXP_DATA",
 			dialogType: "PLAIN",

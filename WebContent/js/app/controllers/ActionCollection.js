@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -39,7 +39,7 @@ define([
 	// The DOM node ID of the node which contains the canvas. This must be set by views/main during initialization
 	// so the various actions can request the correct Controllers (Artboard, GrnModel) and BTCanvas.
 	var APP_CANVAS_CONTAINER_NODE_ID;
-	
+		
 	/////////////////////////////////////
 	// WARN_RESTART_SESSION
 	////////////////////////////////////
@@ -196,8 +196,7 @@ define([
 
 						break;
 					case "ILLEGAL_CLICK_PROCESSED":
-						// TODO: Make this a real error message
-						alert("That click didn't work! Please try again!");
+						utils.showClickError();
 						break;
 					default: 
 						console.error("[ERROR] Received an unexpected response from the server!");
@@ -357,7 +356,7 @@ define([
 			if(e.noZoom) {
 				thisController.selectNodes(e.newVal,e.AppendToSelection);
 			} else {
-				thisController.selectNodesOnCanvasAndZoom(e.newVal,e.AppendToSelection);
+				thisController.selectNodesOnCanvasAndZoom(e.newVal,e.AppendToSelection,true);
 			}
 		});			
 	};
@@ -370,11 +369,11 @@ define([
 	//
 	function CLIENT_GOTO_MODEL(e) {
 		var asyncModelChange = new Deferred();
-		require(["controllers/GrnModelController","controllers/ModelTreeController"],
-			function(GrnModelController,ModelTreeController){
+		require(["controllers/GrnModelController","views"],
+			function(GrnModelController,BTViews){
 			var modelId = (!e.isGrnId ? GrnModelController.splitModelId(e.modelId) : {modelId: e.modelId,state: e.state});
-			ModelTreeController.selectNodeOnTree(modelId.modelId);
-			GrnModelController.setModel(modelId.modelId,modelId.state,e.overlay,e.onPath).then(function(){
+			BTViews.selectOnTree(modelId.modelId);
+			GrnModelController.setModel(modelId.modelId,modelId.state,e.overlay,e.onPath,e.isSliderChange).then(function(){
 				asyncModelChange.resolve();
 			});
 		});
@@ -393,16 +392,16 @@ define([
 	//
 	function CLIENT_GOTO_MODEL_AND_SELECT(e) {
 		require(["controllers/ArtboardController","controllers/GrnModelController",
-	         "controllers/ModelTreeController","dialogs/DialogFactory"],
-			function(ArtboardController,GrnModelController,ModelTreeController,DialogFactory){
+	         "views","dialogs/DialogFactory"],
+			function(ArtboardController,GrnModelController,BTViews,DialogFactory){
 			
-			var modelId = (e.newVal instanceof Array ? e.newVal[0].modelId : e.newVal.modelId);			
+			var modelId = (e.newVal instanceof Array ? e.newVal[0].modelId : e.newVal.modelId);
 			
 			var goToModelAndSel = function(clickEvent) {
 				var entities = (e.newVal instanceof Array ? e.newVal : [e.newVal]);
 				
 				if(modelId && GrnModelController.get("currentModel_") !== modelId) {
-					ModelTreeController.selectNodeOnTree(modelId);
+					BTViews.selectOnTree(modelId);
 					GrnModelController.set("currentModel_",modelId);
 					if(clickEvent.disableOverlays) {
 						GrnModelController.setModelOverlay("None");	
@@ -612,6 +611,14 @@ define([
 		MAIN_ZOOM_TO_CURRENT_SELECTED: function(e) {
 			require(["controllers/ArtboardController"],function(ArtboardController){
 				ArtboardController.getArtboardController(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomToCurrSel();
+			});
+		},
+		MAIN_ZOOM_WARN: function(e) {
+			require(["dialogs/DialogFactory","dijit/registry","app"],function(DialogFactory,registry,appMain){
+				if(!registry.byId("zoom_warning_dialog")) {
+					var zwDialog = DialogFactory.makeZoomWarnDialog();
+					zwDialog.show();
+				}
 			});
 		},
 			
@@ -975,7 +982,7 @@ define([
 		//
 		//
 		CLIENT_SET_MODEL: function(e) {
-			return CLIENT_GOTO_MODEL({isGrnId: true, modelId: e.modelId, state: e.state});
+			return CLIENT_GOTO_MODEL({isGrnId: true, modelId: e.modelId, state: e.state, isSliderChange: e.isSliderChange});
 		},
 		
 		///////////////////////////////////
@@ -1005,7 +1012,7 @@ define([
 						var ExperimentalData = resultsMap.ExperimentalData;
 						loadArgs.preFetched = !ExperimentalData.incomplete;
 						loadArgs.expData = ExperimentalData.HTML;
-						loadArgs.title = resultsMap.FrameTitle ? resultsMap.FrameTitle : "Experimntal Data for " + e.name; 
+						loadArgs.title = resultsMap.FrameTitle ? resultsMap.FrameTitle : "Experimental Data for " + e.name; 
 						loadArgs.objId = ExperimentalData.ID;
 						loadArgs.genomeKey = ExperimentalData.genomeKey;
 						loadArgs.cmdKey = ExperimentalData.flowKey;

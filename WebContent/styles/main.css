@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -27,6 +27,7 @@ html, body {
 }
 
 /* For when we can't load the webpage */
+
 #error {
 	height: 400px;
 	width: 700px;
@@ -69,16 +70,19 @@ html, body {
 }
  
 /* The main application loading overlay */
+
 #loadingOverlay {
     background:  #fff url('../images/BioTapestrySplash_border.gif') no-repeat 50% 50%;
 }
 
 /* Loading overlays for extra windows (eg. Perturbation window, Experiment Data window,Pathing) */
+
 #perturbLoadingOverlay,#expDataLoadingOverlay,#pathingLoadingOverlay {
     background:  #fff url('../images/BioTapestry_dataview_splash.png') no-repeat 50% 50%;
 }
 
 /* The drag-selection rubberband box */
+
 #selexBox {
 	display: none;
 	position: absolute;
@@ -127,12 +131,14 @@ html, body {
 /* Layout Pane CSS */
 
 /* Application Container */
+
 #app_container, #perturb_container, #expdata_container,#pathing_container {
 	height: 100%;
 	width: 100%;
 }
 
 /* Footer */
+
 #footer_pane {
 	overflow: auto;
 	font-family: Verdana,Helevetica,Myriad Pro,sans serif;
@@ -159,6 +165,7 @@ html, body {
 }
 
 /* Top Container */
+
 #top_pane {
 	padding: 0px;
 	margin: 0px;
@@ -168,6 +175,7 @@ html, body {
 }
 
 /* Header */
+
 #header_pane {
 	border: 2px solid #4b5a8a;
 	border-radius: 8px;
@@ -213,6 +221,7 @@ html, body {
 }
 
 /* Overlay */
+
 #annotimg_pane {
 	height: 215px;
 	padding: 0; 
@@ -221,7 +230,6 @@ html, body {
 	border-width: 1px 0px 0px 0px;
 	border-style: solid;
 }
-
 
 #intensity_slider_pane {
 	border: 0;
@@ -312,6 +320,7 @@ html, body {
 }
 
 /* grnWrapper is where all Canvas events are bound */
+
 #grnWrapper {
 	overflow: hidden;
 	white-space: nowrap;
@@ -322,6 +331,7 @@ html, body {
 }
 
 /* A container for the canvas element, used in the virtual scrolling system */
+
 .CanvasContainer {
 	overflow: hidden;
 	border: 0px;
@@ -357,6 +367,7 @@ canvas {
 }
 
 /* We want our access keys to always show */
+
 .dijitMenuItemShortcutKey {
 	text-decoration: underline !important;	
 }
@@ -432,8 +443,6 @@ canvas {
 	margin: 0;
 }
 
-
-
 .FrameDialogElement {
 	margin: 0px;
 	border: 0px; 
@@ -465,9 +474,9 @@ label.right {
 	text-align: center;
 }
 
-/***********************************************
+/*******************
  * dgrid overrides
- ***********************************************/
+ ********************/
 
 .dgrid-scroller {
 	height: auto !important;
@@ -504,14 +513,17 @@ label.right {
 
 
 /**
-// OSX Lion can be set to autohide scrollbars between scroll uses at the system level.
-// Some browsers ignore this, but Webkit browsers do not. If a user is on a system
-// without a hardware scrolling option, they may lose the ability to scroll the 
-// canvas, because it is a virtually scrolled element. We solve this by checking for
-// Mac + Webkit, and then applying a special CSS class that disables the normal webkit
-// scrollbars (to prevent them from showing up when autohide is disabled, or when they
-// would normally) and then skin our own, which we force to always be visible.
- */
+// OSX Lion+ can be set to autohide scrollbars between scroll uses at the system level.
+// Most browsers now abide by this behavior. This presents a problem for our Canvas because 
+// the elements actually generating the scrollbars (hidden DIVs) are not the element being 
+// scrolled (the Canvas). We solve this in Webkit browsers by checking for OSX, and then 
+// applying a special CSS class that disables the normal scrollbars (to prevent them from 
+// showing up when autohide is disabled, or when they would normally) and then skin our own, 
+// which we force to always be visible.
+// 
+// There is currently no solution available for Firefox which does not rely on Js scrollbars, which
+// we hare attempting to avoid in favor of browser native scrollbars.
+ **/
 
 .osxScroll::-webkit-scrollbar {
 	-webkit-appearance:none;
@@ -604,7 +616,6 @@ label.right {
  * like a dijit.form.RadioButton but otherwise behaves exactly like a CheckBox. To
  * apply this to a CheckBox, add the class selector CheckBoxRadio to the object.
  *
- *
  */
 
 .CheckBoxRadio.dijitCheckBox {
@@ -632,4 +643,27 @@ label.right {
 	-webkit-border-radius: 0px 8px 8px 0px;
 }
 
+*
 */
+
+/* Experimental Data Table CSS overrides */
+
+.ExpDataTable {
+	border-collapse: collapse;
+	font-family: Verdana,Helevetica,sans serif;
+}
+
+table.ExpDataTable {
+	border: 2px solid #353535;
+	width: 100%;
+	font-size: 11pt;
+}
+
+.ExpDataTable th, .ExpDataTable td {
+	border: 2px solid #353535;
+	padding: 10px;
+}
+
+.ExpDataTable th {
+	background-color: #96BFE8;
+}

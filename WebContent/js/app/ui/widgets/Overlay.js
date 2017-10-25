@@ -292,7 +292,7 @@ define([
 			selectionBox_ = new Select({
 				onPath_: false,
 				store: selectData_[model],
-				style: "width: 100px;",
+				style: "width: 165px;",
 				labelAttr: "name",
 				onChange: function(e) {
 					
