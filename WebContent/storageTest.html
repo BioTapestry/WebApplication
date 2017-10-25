@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<!-- 
+/*
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
+**                            Seattle, Washington, USA. 
+**
+**    This library is free software; you can redistribute it and/or
+**    modify it under the terms of the GNU Lesser General Public
+**    License as published by the Free Software Foundation; either
+**    version 2.1 of the License, or (at your option) any later version.
+**
+**    This library is distributed in the hope that it will be useful,
+**    but WITHOUT ANY WARRANTY; without even the implied warranty of
+**    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+**    Lesser General Public License for more details.
+**
+**    You should have received a copy of the GNU Lesser General Public
+**    License along with this library; if not, write to the Free Software
+**    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+*/
+ -->
+<html>
+	<head>
+		<TITLE>Testing Local/Session Storage</TITLE>
+	    <meta charset="utf-8">
+	    <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon" />
+		<style>
+			body{
+				font-family: Arial, Helvetica, sans-serif;
+			}
+			div.container {
+				height: 100%;
+			}
+			div.wrapper {
+				border-width: 2px 0px 2px 0px;
+				border-style: solid;
+				border-color: gray;
+				padding: 5px 0px 10px 0px;
+			}
+			div.contents {
+				width: 150px;
+				float: left;
+				margin-right: 5px;
+				height: 100%;
+			}
+			p.contents {
+				background-color: #E0E0E0;
+				font-weight: bold;
+				padding: 2px;
+				margin: 0px;
+				font-size: 9pt;
+			}
+			p.contentsEntry {
+				background-color: #F0F0F0;
+				margin: 2px 0px 2px 0px;
+				padding: 2px;
+				font-size: 9pt;
+			}
+			div.rightWrapper {
+				margin-left: 155px;
+				font-size: 11pt;
+			}
+			div h3 {
+				font-size: 14pt;
+				font-weight: bold;
+				padding: 5px;
+				margin: 5px 0px -5px 0px;
+			}
+			div.rightWrapper p {
+				padding-left: 5px;
+			}
+			div.rightWrapper div:last-child {
+				border: 0px;
+			}
+			div.rightWrapper div {
+				border-bottom: 2px solid black;
+			}
+		</style>
+		<script>
+		function store(e) {
+			switch(e.value) {
+				case "GOTO":
+					var view = {
+						tabId: "DB_A",
+						modelId: "bioTapA",
+						storeLocale: "local"
+					};
+					window.localStorage.setItem("GOTO",JSON.stringify(view));
+					break;
+				case "SELECT":
+					window.localStorage.setItem("SELECT",JSON.stringify({msg: "Testing localStorage for SELECT!"}));
+					break;
+					
+				case "OVERLAY":
+					window.localStorage.setItem("OVERLAY",JSON.stringify({msg: "Testing localStorage for OVERLAY!"}));
+					break;
+					
+				case "ZOOM":
+					window.localStorage.setItem("ZOOM",JSON.stringify({msg: "Testing localStorage for ZOOM!"}));
+					break;					
+			}
+		};
+		
+		</script>
+	</head>
+	<body>
+		<center>
+			<table>
+				<tr>
+					<td>
+						<a href="http://www.systemsbiology.org">
+							<img src="http://www.BioTapestry.org/images/logo-isb.png" border="0" alt="ISB Logo"/>
+						</a>
+					</td>
+					<td>
+						<a href="http://www.BioTapestry.org">
+							<img src="http://www.BioTapestry.org/images/BigBioTapestryTextWhite33.png" border="0" alt="BioTapestry" hspace="30"/>
+						</a>
+					</td>
+					<td>
+						<a href="http://www.caltech.edu">
+							<img src="http://www.BioTapestry.org/images/caltech-logo.jpg" border="0" alt="Caltech Logo"/>
+						</a>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="3" align="center">
+						<h3>Testing Local/Session Storage</h3>
+					</td>
+				</tr>
+			</table>
+		</center>
+		
+		<div class="container">
+
+			<div class="wrapper">
+		
+				<div class="contents">
+					<p class="contents">Contents</p>
+					<p class="contentsEntry"><a href="#about">About</a></p>
+					<p class="contentsEntry"><a href="#howto">Quick Start User Guide</a></p>
+				</div>
+				<div class="rightWrapper">
+					<div>
+						<a name="about"></a>
+						<h3>About</h3>
+						<p>This is a test example for using local and session storage in conjunction with the BioTapestry Web Client to manipulate a model open in a tab.</p>
+					</div>
+					<div>
+						<h3>Test Links</h3>
+						<ol>
+							<li><b>Launch the Model: </b> <a href="/BTWebEditor/" target="_blank">BioTapestry Web Client Editor Tabbed Example</a>
+							<li><b>Storage test #1:</b> <button value="GOTO" onclick="store(this)" type="button">Click me</button> to send the current tab to the root.
+							<li><b>Storage test #2:</b> <button value="OVERLAY" onclick="store(this)" type="button">Click me</button> to store and report an 'OVERLAY' action.
+							<li><b>Storage test #3:</b> <button value="SELECT" onclick="store(this)" type="button">Click me</button> to store and report a 'SELECT' action.
+						</ol>
+					</div>
+					<div>
+						<a name="howto"></a>
+						<h3>Quick Start</h3>
+						<p>We have a <a href="howto.html" target="_blank">'Quick Start' user guide</a> available. It gives a brief overview of the Web Client Viewer's capabilities and functionality.</p>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+	</body>
+</html>
