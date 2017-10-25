@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -17,22 +17,70 @@
 **    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-define(["dojo/text!./build.info"],function(buildText){
+
+define([
+    "dojo/text!./build.info"
+    ,"dojo/text!./viewerKeymapModel.html"
+    ,"dojo/text!./viewerKeymapMenu.html"
+    ,"dojo/text!./viewerKeymapModelTree.html"
+    ,"dojo/text!./editorKeymapModel.html"
+    ,"dojo/text!./editorKeymapMenu.html"
+    ,"dojo/text!./editorKeymapModelTree.html"
+    ,"dojo/text!./about.html"
+    ,"dojo/text!./zoomWarn.html"
+],function(
+	buildText
+	,keymapViewerModel
+	,keymapViewerMenu
+	,keymapViewerModelTree
+	,keymapEditorModel
+	,keymapEditorMenu
+	,keymapEditorModelTree
+	,about
+	,zoomWarnText
+){
 	
-	var buildInfo = JSON.parse(buildText);	
+	//////////////////
+	// TextMessages
+	//////////////////
+	//
+	// Module containing static text messages to be used on static pages or in dialogs,
+	// plus functions to allow for updating specific fields
 	
-	var mainText = "<p>BioTapestry Web {TYPE} Version "+buildInfo.BTWVERSION+"/BioTapestry Version "+buildInfo.BTVERSION+" ("+buildInfo.DATE
-	+ ")</p><p>BioTapestry software is Copyright (C) 2003-" + new Date().getFullYear() + ", Institute for Systems Biology. It is released under "
-	+ "the GNU Lesser General Public License, a copy of which may be found <a target=\"_blank\" href=\"licenses/LICENSE\">here</a>.</p>"
-	+ "<p>The Javascript libraries used in the BioTapestry Web Client are covered by the following licenses:<ul>"
-	+ "<li><a href=\"licenses/LICENSE-Dojo\" target=\"_blank\">Dojo</a><li><a href=\"licenses/LICENSE-Underscore\" target=\"_blank\">Underscore</a>"
-	+ "<li><a href=\"licenses/LICENSE-dgrid\" target=\"_blank\">dgrid</a>, <a href=\"licenses/LICENSE-put-selector\" target=\"_blank\">put-selector</a>, " 
-	+ "<a href=\"licenses/LICENSE-xstyle\" target=\"_blank\">xstyle</a></ul></p><p>Flexjson is covered by the <a href=\"licenses/LICENSE-flexjson\""
-	+ "target=\"_blank\">Apache License Version 2.0</a>.</p><p>Some of the toolbar icon images in this package are covered by the following free distribution license:"
-	+ "<ul><li><a target=\"_blank\" href=\"licenses/LICENSE-SUN\">Sun Microsystems</a></li></ul></p>";
+	var buildInfo = JSON.parse(buildText);
 	
 	return {
-		aboutViewer: mainText.replace("{TYPE}","Viewer")
-		,aboutEditor: mainText.replace("{TYPE}","Editor")
+		aboutViewer: about.replace(/\{TYPE\}/g,"Viewer")
+			.replace(/\{BTWVERSION\}/g,buildInfo.BTWVERSION)
+			.replace(/\{BTVERSION\}/g,buildInfo.BTVERSION)
+			.replace(/\{BUILDDATE\}/g,buildInfo.DATE)
+			.replace(/\{YEAR\}/g,new Date().getFullYear())
+		,aboutEditor: about.replace(/\{TYPE\}/g,"Editor")
+			.replace(/\{BTWVERSION\}/g,buildInfo.BTWVERSION)
+			.replace(/\{BTVERSION\}/g,buildInfo.BTVERSION)
+			.replace(/\{BUILDDATE\}/g,buildInfo.DATE)
+			.replace(/\{YEAR\}/g,new Date().getFullYear())
+		,keyMapViewer: {
+			modelTabTitle: "Model Display"
+			,menuTabTitle: "Toolbar"
+			,modelTreeTabTitle: "Model Tree"
+			,modelTabContent: keymapViewerModel
+			,menuTabContent: keymapViewerMenu
+			,modelTreeTabContent: keymapViewerModelTree
+		}
+		,keyMapEditor: {
+			modelTabTitle: "Model Display"
+			,menuTabTitle: "File Menu and Toolbar"
+			,modelTreeTabTitle: "Model Tree"
+			,modelTabContent: keymapEditorModel
+			,menuTabContent: keymapEditorMenu
+			,modelTreeTabContent: keymapEditorModelTree
+		}
+		,zoomWarning: function(type) {
+			return zoomWarnText.replace(/\{ZOOMTYPE\}/g,type);
+		}
+		,V_SLOW_LOAD: "The model appears to be loading very slowly.<br />You may wish to reload the application or check your internet connection."
+		,BAD_CLICK: "That was not a valid click location! Please try again."
+		,GENERIC_ERROR: "There was an error while processing this request."
 	};
 });

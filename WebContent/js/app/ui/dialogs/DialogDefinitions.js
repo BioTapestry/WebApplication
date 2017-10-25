@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -23,27 +23,24 @@ define([
     "dojo/_base/array",
 	"dijit/form/Button",
 	"dijit/form/RadioButton",
-	"./CheckBox",
+	"widgets/BTCheckBox",
+	"widgets/BTSelectableGrid",
 	"dijit/form/TextBox",
 	"dijit/form/ValidationTextBox",
 	"dijit/form/Textarea",
 	"dijit/layout/ContentPane",
 	"dijit/layout/BorderContainer",
+	"dijit/layout/StackContainer",
 	"dijit/layout/TabContainer",
-	"./ComboBox",
-	"./SelectionGroup",
-    "dgrid/Grid",
+	"widgets/BTComboBox",
+	"widgets/BTColorPicker",
+	"widgets/BTColorEditor",
+	"widgets/BTSelectionGroup",
     "./DialogCanvas",
-    "dgrid/Keyboard",
-    "dgrid/Selection",
-    "dgrid/extensions/ColumnHider",
-    "dgrid/extensions/DijitRegistry",
-    "dgrid/extensions/ColumnResizer",
     "controllers/XhrController",
     "static/XhrUris",
     "static/ErrorMessages",
-    "./TextMessage",
-    "dijit/Destroyable"
+    "./TextMessage"
 ],function(
 	declare,
 	Deferred,
@@ -51,43 +48,26 @@ define([
 	Button,
 	RadioButton,
 	CheckBox,
+	SelectableGrid,
 	TextBox,
 	ValTextBox,
 	TextArea,
 	ContentPane,
 	BorderContainer,
+	StackContainer,
 	TabContainer,
 	BTComboBox,
+	BTColorPicker,
+	BTColorEditor,
 	BTSelectionGroup,
-	Grid,
 	DialogCanvas,
-	Keyboard,
-	Selection,
-	ColumnHider,
-	DijitRegistry,
-	ColumnResizer,
 	XhrController,
 	XhrUris,
 	ErrorMsgs,
-	TextMessage,
-	Destroyable
+	TextMessage
 ) {
 	
 	var clientMode_ = "VIEWER";
-		
-	// dgrid's DijitRegistry does NOT implement own(), but Destroyable DOES implement destroy, which clobbers the DijitRegistry
-	// destroy. Destroyable and DijitRegistry must **always** be mixed in this order, or Destroyable will supercede the DijitRegistry
-	// methods and then destruction of grids will fail.
-	var SelectableGrid = declare([ Grid, Keyboard, Selection, ColumnHider, Destroyable, DijitRegistry, ColumnResizer ], {
-		disabled: false,
-		disable: function(val) {
-			this.disabled = val;
-			if(val) {
-				this.refresh();
-				this.renderArray([]);
-			}
-		}
-	});
 	
 	var Elements = {
 		TEXT_BOX_SINGLE: TextBox,
@@ -102,11 +82,15 @@ define([
 		PANE: ContentPane,
 		TAB_CONTAINER: TabContainer,
 		LAYOUT_CONTAINER: BorderContainer,
+		STACK_CONTAINER: StackContainer,
 		TEXT_MESSAGE: TextMessage,
 		GRID: SelectableGrid,
 		LISTSELECT: SelectableGrid,
 		DRAWING_AREA: DialogCanvas,
-		COMBO_BOX_TEXT: BTComboBox
+		COMBO_BOX_TEXT: BTComboBox,
+		COMBO_BOX_COLOR: BTComboBox,
+		COLOR_PICKER: BTColorPicker,
+		COLOR_EDITOR: BTColorEditor
 	};
 	
 	/////////////////////////////
@@ -121,7 +105,7 @@ define([
 	
 	var _gridRenderers = {
 		signIcon: {
-			sign: function(object, data, td, options) {
+			sign: function(object, value, td, options) {
 				var iconClass = "iconContainer BioTapIcons524 ";
 				switch(object.sign) {
 					case 1:
@@ -138,14 +122,19 @@ define([
 			}
 		},
 		indentedColumn: {
-			display: function(object,data,td,options) {
+			display: function(object,value,td,options) {
 				if(object.needsIndent) {
 					td.innerHTML = '<p class="LeftIndent">'+object.display+'</p>';
 				} else {
 					td.innerHTML = object.display;
 				}
 			}
-		}			
+		},
+		btColor: {
+			display: function(object,value,td,options) {
+				td.innerHTML = "<div style=\"background-color: " + object.color + ";\" class=\"BTComboColorChooserSwatch\">&nbsp;</div>" + " " + object.name;
+			}
+		}
 	};
 	
 	/////////////////////////////////////
@@ -156,10 +145,87 @@ define([
 	// failover dialogs for when window popups are not allowed
 	//
 	var _dialogDefs = {
+		KEYMAP: {
+			name: "KEYMAP",
+			dialogType: "PLAIN",
+			parameters: {title: "BioTapestry Keymap",id: "keymap_dialog",style: "height 675px; width: 800px;",openAt: {x: 0,y: 0}},
+			dialogElementCollections: {
+				mainPane: {
+					elementType: "LAYOUT_CONTAINER",
+					collectionElements: {
+						center: [
+					         {
+					        	 elementType: "TAB_CONTAINER",
+					        	 collectionElements: {
+					        		 0: {
+					        			 elementType: "PANE",
+					        			 parameters: {id: "keymap_container_model",content: "", style: "border: 1px solid black;"},
+					        			 layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+					        		 },
+					        		 1: {
+					        			 elementType: "PANE",
+					        			 parameters: {id: "keymap_container_menu",content: "", style: "border: 1px solid black;"},
+					        			 layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+					        		 },
+					        		 2: {
+					        			 elementType: "PANE",
+					        			 parameters: {id: "keymap_container_modeltree",content: "", style: "border: 1px solid black;"},
+					        			 layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+					        		 }
+					        	 },
+						         parameters: {
+						        	 
+						         },
+						         layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+					         }
+					    ],
+				      	bottom: [{
+		      	    	   	elementType: "BUTTON",
+		      	    	   	parameters: {label: "Close", id: "close_btn", "class": "RightHand"},
+		      	    	   	events: {click: {uiElementActions: ["DIALOG_CLOSE"], cmdAction: "DO_NOTHING"}},
+		      	    	   	layout:{layoutParameters:{region:"bottom",ordinal:"0"},layoutType:"REGIONAL"}
+	      	    	   	}]
+					},
+					parameters: {
+						style: "height: 655px; width: 780px;",
+						gutters: "false"
+					}					
+				}
+			}
+		},
+		COLOR_EDITOR: {
+			name: "COLOR_EDITOR",
+			dialogType: "PLAIN",
+			parameters: {title: "Color Editor",id: "color_editor_dialog",isModal: true, style: "height 420px; width: 870px;",openAt: {x: -100,y: -50},alwaysMove: true},
+			dialogElementCollections: {
+				mainPane: {
+					elementType: "LAYOUT_CONTAINER",
+					collectionElements: {
+						center: [
+					         {
+					        	 elementType: "COLOR_EDITOR",
+					        	 parameters: { openColor: "#ffffff" },
+					        	 layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+					         }
+					    ],
+				      	bottom: [{
+		      	    	   	elementType: "BUTTON",
+		      	    	   	parameters: {label: "Close", id: "close_btn", "class": "RightHand"},
+		      	    	   	events: {click: {uiElementActions: ["DIALOG_CLOSE"], cmdAction: "DO_NOTHING"}},
+		      	    	   	layout:{layoutParameters:{region:"bottom",ordinal:"0"},layoutType:"REGIONAL"}
+	      	    	   	}]
+					},
+					parameters: {
+						style: "height: 400px; width: 850px;",
+						gutters: "false"
+					}					
+				}
+			}
+		},		
 		ABOUT: {
 			name: "ABOUT",
 			dialogType: "PLAIN",
-			parameters: {title: "About BioTapestry",id: "about_dialog",style: "height 750px; width: 680px;",openAt: {x: 0,y: 0}},
+			parameters: {title: "About BioTapestry",id: "about_dialog",style: "height 750px; width: 720px;",openAt: {x: 0,y: 0}},
 			dialogElementCollections: {
 				mainPane: {
 					elementType: "LAYOUT_CONTAINER",
@@ -184,12 +250,39 @@ define([
 	      	    	   	}]
 					},
 					parameters: {
-						style: "height: 730px; width: 660px;",
+						style: "height: 730px; width: 700px;",
 						gutters: "false"
 					}					
 				}
 			}
 		},
+		ZOOM_WARNING: {
+			name: "ZOOM_WARNING",
+			dialogType: "PLAIN",
+			parameters: {title: "Trying to Zoom?",id: "zoom_warning_dialog",isModal: false,style: "height 325px; width: 450px;",openAt: {x: 0,y: 0}, alwaysMove: true},
+			dialogElementCollections: {
+				mainPane: {
+					elementType: "LAYOUT_CONTAINER",
+					collectionElements: {
+						center: [{
+						   elementType: "TEXT_MESSAGE",
+						   parameters: {id: "zoom_warn_message",content: ""},
+						   layout:{layoutParameters:{region:"center",ordinal:"0"},layoutType:"REGIONAL"}
+						}],
+				      	bottom: [{
+		      	    	   	elementType: "BUTTON",
+		      	    	   	parameters: {label: "OK", id: "zoom_warn_ok_btn"},
+		      	    	   	events: {click: {uiElementActions: ["DIALOG_CLOSE","BLANK_FORM"], cmdAction: "DO_NOTHING"}},
+		      	    	   	layout:{layoutParameters:{region:"bottom",ordinal:"0"},layoutType:"REGIONAL"}
+	      	    	   	}]
+					},
+					parameters: {
+						style: "height: 300px; width: 430px;",
+						gutters: "false"
+					}					
+				}
+			}
+		},		
 		EXP_DATA: {
 			name: "EXP_DATA",
 			dialogType: "PLAIN",

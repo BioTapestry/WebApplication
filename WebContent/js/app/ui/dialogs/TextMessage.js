@@ -35,7 +35,7 @@ define([
 	return declare([],{
 		
 		_messageNode: null,
-		
+				
 		getNode: function() {
 			return this._messageNode;
 		},

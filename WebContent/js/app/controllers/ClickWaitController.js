@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -22,22 +22,39 @@ define([
     "dojo/on",
     "dojo/dom",
     "views/BioTapestryCanvas",
+    "controllers/ActionCollection",
     "dojo/dom-style"
 ],function(
 	DojoArray,
 	on,
 	dom,
 	BTCanvas,
+	ActionCollection,
 	domStyle
 ) {
 
 
-	var installedClicks_ = {};
+	var _installedClicks = {};
 	
-	function installClick_(params) {
+	////////////////////
+	// _installClick
+	//////////////////
+	//
+	//
+	function _installClick(params) {
 		domStyle.set(window.document.body,"cursor","crosshair");
-		installedClicks_[params.clickId] = {
-			handler: on(dom.byId(params.canvasId),"click",params.callback),
+		_installedClicks[params.clickId] = {
+			handler: on(dom.byId(params.canvasId),"click",
+				function(e) {
+					var translatedClick = BTCanvas.translateHit({x: e.clientX, y: e.clientY},params.canvasId);
+					params.stepData.translatedClick = {
+						x: Math.round(translatedClick.x),
+						y: Math.round(translatedClick.y)
+					};
+					params.callback && params.callback(params.stepData);
+					params.action && ActionCollection[params.action](params.stepData);
+				}
+			),
 			canvasId: params.canvasId,
 			type: params.type
 		};
@@ -60,29 +77,35 @@ define([
 		}
 	};
 	
-	function uninstallClick_(params) {
-		if(installedClicks_[params.clickId] && installedClicks_[params.clickId]) {
+	/////////////////////////
+	// _uninstallClick
+	///////////////////////
+	//
+	//
+	function _uninstallClick(params) {
+		if(_installedClicks && _installedClicks[params.clickId]) {
 			domStyle.set(window.document.body,"cursor","default");
-			installedClicks_[params.clickId] && installedClicks_[params.clickId]["handler"] && installedClicks_[params.clickId]["handler"].remove(); 
+			_installedClicks[params.clickId] && _installedClicks[params.clickId].handler && _installedClicks[params.clickId].handler.remove(); 
 			require(["views"],function(BTViews){
 				params.statesAndMasks && BTViews.updateViewStates(params.statesAndMasks);			
 			});
 			
 			// click specifics here
-			switch(installedClicks_[params.clickId].type) {
+			switch(_installedClicks[params.clickId].type) {
 				case "DRAW":
-					BTCanvas.drawClickEnd(installedClicks_[params.clickId].canvasId);
+					BTCanvas.drawClickEnd(_installedClicks[params.clickId].canvasId);
 					break;
 				case "ACTION":
-					BTCanvas.actionClickPending(installedClicks_[params.clickId].canvasId,false);
+					BTCanvas.actionClickPending(_installedClicks[params.clickId].canvasId,false);
 					break;
 				default:
-					console.debug("[ERROR] This click type is not recognized: " + params.type);
+					console.debug("[ERROR] This click type is not recognized: " + _installedClicks[params.clickId].type);
 					break;
 			}
+			
+			delete _installedClicks[params.clickId];
 		}
 	};
-		
 		
 	return {
 		
@@ -98,10 +121,10 @@ define([
 		// 	statesAndMasks: any masking and stating to occur while the click event is active (optional)
 		//
 		installClick: function(params) {
-			if(installedClicks_[params.clickId]) {
-				uninstallClick_(params);
+			if(_installedClicks[params.clickId]) {
+				_uninstallClick(params);
 			}
-			installClick_(params);
+			_installClick(params);
 			
 		},
 		
@@ -113,13 +136,13 @@ define([
 		// thisClick: ID of the click to remove
 		// statesAndMasks: masks and states  to apply after removal (optional)
 		uninstallClick: function(thisClick,statesAndMasks) {
-			uninstallClick_({clickId: thisClick, statesAndMasks: statesAndMasks});
+			_uninstallClick({clickId: thisClick, statesAndMasks: statesAndMasks});
 		},
 		
 		uninstallAllClicks: function(statesAndMasks) {
-			for(var i in installedClicks_) {
-				if(installedClicks_.hasOwnProperty(i)) {
-					uninstallClick_({clickId:i,statesAndMasks: statesAndMasks});
+			for(var i in _installedClicks) {
+				if(_installedClicks.hasOwnProperty(i)) {
+					_uninstallClick({clickId:i,statesAndMasks: statesAndMasks});
 				}
 			}
 		}

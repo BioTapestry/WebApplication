@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -19,6 +19,7 @@
 
 define([
 	"controllers/ZoomController",
+	"static/BTConst",
     "dojo/_base/declare",
     "dojo/Stateful",
     "dojo/_base/array",
@@ -26,6 +27,7 @@ define([
 	"dojo/domReady!"
 ],function(
 	ZoomController,
+	BTConst,
 	declare,
 	Stateful,
 	DojoArray,
@@ -51,6 +53,16 @@ define([
 		
 		// The ID of this model's VfG parent model
 		vfgParent_: null,
+		
+		nodeType_: null,
+		
+		cachedInRenderer_: null,
+		getCached: function() {
+			return this.cachedInRenderer_;
+		},
+		setCached: function(val) {
+			this.cachedInRenderer_ = val;
+		},
 		
 		
 		drawingObject_: null,
@@ -161,6 +173,10 @@ define([
 		},
 		_toggledRegions_Setter: function(val) {
 			this.toggledRegions_ = val;
+		},
+		
+		isGroupNode: function() {
+			return this.nodeType_ === BTConst.NODETYPE_GROUP;
 		},
 		
 		// Set a watch function on a property of this object

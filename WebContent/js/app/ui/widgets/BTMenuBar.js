@@ -58,9 +58,13 @@ define([
 	XhrUris,
 	utils
 ) {
-
-	// A MenuBar with n-deep submenus. The menu bar builds itself off of JSON
-	// returned from a URI provided in the constructor.
+	
+	
+	//////////////////////////
+	// BTMenuBar
+	/////////////////////////
+	//
+	// A MenuBar with n-deep submenus. The menu bar builds itself off of JSON returned from a URI provided in the constructor.
 
 	return declare([], {
 		constructor: function(jsonUri) {
@@ -133,7 +137,7 @@ define([
 		    				menuLabel = 
 		    					menuLabel.substring(0,pos) + "{" + menuLabel.substring(pos,pos+1) + "}" + menuLabel.substring(pos+1);
 		    			} else {
-		    				console.error("Could not find " + menuData.mnem + " in " + menuLabel);
+		    				console.warn("Could not find " + menuData.mnem + " in " + menuLabel + " - no mnemonic assigned.");
 		    			}
 		    		}
 
@@ -184,6 +188,15 @@ define([
 							    	});	
 								} else {
 									subMenuParentItem.set("disabled",true);
+								}
+								
+								if(menuData.name === "Help") {
+									subMenu.addChild(new MenuItem({
+										label: "{K}ey Bindings",
+										id: "keymap",
+										onClick: ActionCollection.CLIENT_KEYMAP,
+										typeAndKey: "CLIENT_KEYMAP"
+									}));
 								}
 					    	}
 					    	break;
@@ -313,7 +326,6 @@ define([
 		            	
 		            	// MenuBar doesn't completely behave in a desktop-like manner due to how focusing on
 		            	// the DOM works. So this helps make it slightly more Desktop-like.
-		            	
 		            	hMenu.own(
 	            			on(hMenu, "keypress", function(e){
 			            		var keyPressed = String.fromCharCode(e.charCode || e.keyCode || e.which);
@@ -346,8 +358,6 @@ define([
 		    	
 		    	return loadAsync.promise;
 		    };
-		    	
-		    var artboardContextMenu = null;
 		    
 		    ////////////// PRIVILEGED MEMBERS //////////////
 		    

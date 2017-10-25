@@ -72,10 +72,10 @@ define([
             });
         },
 
-        render: function(rc, show_components, current_settings) {
+        render: function(rc, show_components, alpha_settings) {
             var ctx = rc.getCanvasContext();
             var quickFade = this.getNameFadeMode() == NetModuleCommon.Properties.FADE_QUICKLY;
-            var label_alpha = quickFade ? current_settings.regionLabelAlpha : current_settings.regionBoundaryAlpha;
+            var label_alpha = quickFade ? alpha_settings.regionLabelAlpha : alpha_settings.regionBoundaryAlpha;
 
             ctx.globalCompositeOperation = "destination-out";
             this.renderFills(rc, 1.0);
@@ -83,10 +83,10 @@ define([
             ctx.globalCompositeOperation = "source-over";
 
             if (!show_components) {
-                this.renderFills(rc, current_settings.regionFillAlpha);
+                this.renderFills(rc, alpha_settings.regionFillAlpha);
             }
 
-            this.renderEdges(rc, current_settings.regionBoundaryAlpha);
+            this.renderEdges(rc, alpha_settings.regionBoundaryAlpha);
 
             this.renderLabel(rc, label_alpha);
         },

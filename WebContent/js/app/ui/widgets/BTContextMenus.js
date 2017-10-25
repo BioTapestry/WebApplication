@@ -74,7 +74,8 @@ define([
 	//List of context menu references (each context menu exists only once) 
 	var contextMenuList_ = {
 		canvas: null,
-		modeltree: null
+		modeltree: null,
+		tabContainer: null
 	};
 	
 	// Tracker boolean for an active context menu, so we can manage problems with
@@ -258,8 +259,14 @@ define([
 			}
 		},
 		
-	   // Build a popup-menu with n-deep flyout menus from JSON data 
-	   buildMenuFromJson: function(menuData,menuParent,nodeId,ActionSource) {
+		///////////////////////////////
+		// buildMenuFromJson
+		////////////////////////
+		//
+		//
+		// Build a popup-menu with n-deep flyout menus from JSON data
+		//
+		buildMenuFromJson: function(menuData,menuParent,nodeId,ActionSource) {
 		   if(menuData.condition && !(ActionConditions.get(menuData.condition))) {
 			   return;
 		   }
@@ -315,23 +322,15 @@ define([
     				
     			case "ACTION":
     			case "CUSTOM_ACTION":
-    				var actionArgs;
-    				if(menuData.actionArg) {
-    					actionArgs = {
-    						id: nodeId,
-    						uri: menuData.actionArgAsURLArgs
-    					}
-    				} else {
-    					actionArgs = nodeId;
-    				}
-    				
     		    	menuParent.addChild(
     		    		new MenuItem({
     		    			disabled: ((!menuData.enabled && !menuData.isEnabled) ? true : false),
     		    			label: menuLabel.replace(">","&gt;").replace("<","&lt;"),
     		    			id: menuLabel + "_menuitem_cnvctxt_" + menuData.key+ "_" + utils.makeId(),
+    		    			actionArgs: { id: nodeId, uri: menuData.actionArgAsURLArgs },
+    		    			uniqueId: utils.makeId(),
     		    			onClick: (ActionSource[menuData.keyType + "_" + menuData.key] ? 
-    		    					ActionSource[menuData.keyType + "_" + menuData.key](actionArgs) : 
+    		    					ActionSource[menuData.keyType + "_" + menuData.key] : 
 					    		function(e){console.debug("No Action available for onClick of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
 				    		typeAndKey: menuData.keyType + "_" + menuData.key
     		    		})
@@ -349,11 +348,15 @@ define([
     		    	menuParent.addChild(
 			    		new CheckedMenuItem({
 			    			disabled: ((!menuData.enabled && !menuData.isEnabled) ? true : false),
+			    			actionArgs: { id: nodeId, uri: menuData.actionArgAsURLArgs },
+    		    			uniqueId: utils.makeId(),
 			    			label: menuLabel.replace(">","&gt;").replace("<","&lt;"),
 			    			id: menuLabel + "_chkbx_cnvctxt_" + menuData.key + "_" + utils.makeId(),
-			    			onChange: (ActionSource[menuData.keyType + "_" + menuData.key] ? 
-			    					ActionSource[menuData.keyType + "_" + menuData.key](nodeId) : 
-							    function(e){console.debug("No Action available for onChange of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
+			    			// We attach our function to the click and not the onChange, because onChange does not provide
+			    			// the click event as an argument to the emitted event, only the value
+			    			onClick: (ActionSource[menuData.keyType + "_" + menuData.key] ? 
+			    				ActionSource[menuData.keyType + "_" + menuData.key] : 
+			    					function(e){console.debug("No Action available for onChange of " + menuLabel + " [" + menuData.keyType + "_" + menuData.key + "]");}),
 						    checked: (menuData.isChecked ? menuData.isChecked : false),
 						    typeAndKey: menuData.keyType + "_" + menuData.key
 			    		})
@@ -370,7 +373,7 @@ define([
 	    // for the appropriate context menu definition based on the node type and
 	    // ID. 
 	    //
-		buildCanvasHitContextMenu: function(hit,event,overlay) {
+		buildCanvasHitContextMenu: function(hit,event,overlay,cnvContainerDomNodeId,index) {
 			var nodeType = HIT_TO_NODE_TYPE[hit.getType()];
 			if(!availableContextMenus_[nodeType]) {
 				return;
@@ -378,7 +381,7 @@ define([
 			var self=this;
 			this.buildContextMenu(
 				"canvas",
-				{targetNodeIds: ["grn"], id: "canvas_context_menu_id", hitObj: hit},
+				{targetNodeIds: [cnvContainerDomNodeId], id: "canvas_context_menu_id", hitObj: hit},
 				[],
 				true
 			);
@@ -391,9 +394,8 @@ define([
 					headers:{"Content-Type":"application/json"},
 					data: JSON.stringify(ClientState.getNewStateObject({currOverlay: overlay.id,enabledMods:overlay.enabled_modules}))
 				};
-				
 			}
-			XhrController.xhrRequest(XhrUris.popup(nodeType,hit,(args !== null)),args).then(function(data){
+			XhrController.xhrRequest(XhrUris.popup(nodeType,hit,(args !== null),index),args).then(function(data){
 				if(!data) {
 					self.addSingleItem("canvas",{label: "No menu to return!"});
 				} else {
@@ -410,7 +412,7 @@ define([
 				if(contextMenuList_["canvas"].domNode.parentNode) {
 				    require(["dojo/dom-style","dojo/dom-geometry"],function(domStyle,domGeometry){
 						var contextPlace = domGeometry.position(contextMenuList_["canvas"].id);
-						var grnPlace = domGeometry.position("grn");
+						var grnPlace = domGeometry.position(cnvContainerDomNodeId);
 						var newLeft,newTop,newHeight;
 						if((contextPlace.w + contextPlace.x) > (grnPlace.x + grnPlace.w)) {
 							newLeft = event.clientX-contextPlace.w;
@@ -469,12 +471,12 @@ define([
 		// ModelTree context menus are all identical in content; only action status (enabled/disabled)
 		// varies, and that is set when the context menu is loaded.
 		//
-		buildModelTreeContextMenu: function(treeNode) {
+		buildModelTreeContextMenu: function(treeIds,treeNode) {
 			var self=this;
 			this.buildContextMenu(
 				"modeltree",
 				{
-					targetNodeIds: ["ModelTree"],
+					targetNodeIds: treeIds,
 					id: "modeltree_context_menu_id",
 					selector: ".dijitTreeNode",
 					onOpen: function(e) {
@@ -506,6 +508,7 @@ define([
 					DojoArray.forEach(data.items_,function(item) {
 						self.buildMenuFromJson(item,contextMenuList_["modeltree"],treeNode,EditorActions);
 					});
+					contextMenuList_["modeltree"].startup();
 				},function(err){
 					if(err.status === "NEW_SESSION") {
 						require(["dijit/popup","controllers/ActionCollection"],function(popup,ActionCollection){
@@ -515,8 +518,61 @@ define([
 						});					
 					}
 				});
-				
-				contextMenuList_["modeltree"].startup();
+			});
+		},
+		
+		////////////////////////////////
+		// addTreeToModelTreeContext
+		///////////////////////////////
+		//
+		//
+		//
+		addTreeToModelTreeContext: function(treeId) {
+			if(contextMenuList_["modeltree"]) {
+				var nodeIds = contextMenuList_["modeltree"].targetNodeIds;
+				nodeIds.push(treeId);
+				// destroy and rebuild
+			} else {
+				// TODO: make one!
+			}
+		},
+		
+		////////////////////////////
+		// buildTabListContextMenu
+		///////////////////////////
+		//
+		//
+		buildTabContextMenu: function(tabContainerId,tabId) {
+			var self=this;
+			require(["controllers/EditorActions","dijit"],function(EditorActions,dijit){
+				/*
+				this.buildContextMenu(
+					"tabContainer",
+					{
+						targetNodeIds: [tabContainerId],
+						id: "tabContainer_context_menu_id",
+						selector: ".dijitTab"
+					},
+					[],
+					false
+				);
+				*/
+				contextMenuList_["tabContainer"] = dijit.byId("tab_container_tablist_Menu");
+				XhrController.xhrRequest(XhrUris.tabContext()).then(function(data){
+					DojoArray.forEach(data.items_,function(item) {
+						self.buildMenuFromJson(item,contextMenuList_["tabContainer"],tabId,EditorActions);
+					});
+					contextMenuList_["tabContainer"].startup();
+					contextMenuList_["tabContainer"].removeChild(contextMenuList_["tabContainer"].getChildren()[0]);
+				},function(err){
+					if(err.status === "NEW_SESSION") {
+						require(["dijit/popup","controllers/ActionCollection"],function(popup,ActionCollection){
+							popup.close(contextMenuList_["tabContainer"]);
+							contextMenuIsActive_ = false;
+							ActionCollection.CLIENT_WARN_RESTART_SESSION();
+						});					
+					}
+				});
 			});
 		},
 		

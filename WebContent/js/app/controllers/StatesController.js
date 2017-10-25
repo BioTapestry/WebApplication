@@ -45,14 +45,30 @@ define([
 		return !!(LocalStates[key] !== undefined);
 	};
 	
-	function _setState(key,state) {
+	function _setState(key,state,tab) {
 		if(LocalStates[key] !== undefined) {
-			LocalStates.set(key,state);
+			if(tab !== null && tab !== undefined) {
+				var stored = LocalStates.get(key);
+				if(!stored) {
+					stored = {};
+				}
+				stored[tab] = state;
+				LocalStates.set(key,stored);
+			} else {
+				LocalStates.set(key,state);
+			}
 		}
 	};
 	
-	function _getState(key) {
+	function _getState(key,tab) {
 		if(LocalStates[key] !== undefined) {
+			if(tab !== null && tab !== undefined) {
+				var stored = LocalStates.get(key);
+				if(stored) {
+					return LocalStates.get(key)[tab];
+				}
+				return null;
+			}
 			return LocalStates.get(key);
 		}
 		return null;
@@ -67,7 +83,7 @@ define([
 		// base state names for frequently used local states which may need to be
 		// named similarly but not identically to a local state (eg., zoom in for
 		// a floating artboard should not be named MAIN_ZOOM_IN as it will effect
-		// the application zoom button, but it should still be named [something]_ZOOM_IN).
+		// the application zoom button, it should still be named [something]_ZOOM_IN).
 		zoomIn: "_ZOOM_IN",
 		zoomOut: "_ZOOM_OUT",
 		zoomToAllSelected: "_ZOOM_TO_ALL_SELECTED",
@@ -80,11 +96,11 @@ define([
 			return(LocalStates.watch(key,callback));
 		},
 		
-		setState: function(key,value) {
-			_setState(key,value);
+		setState: function(key,value,tab) {
+			_setState(key,value,tab);
 		},
-		getState: function(key) {
-			return _getState(key);
+		getState: function(key,tab) {
+			return _getState(key,tab);
 		},
 		
 		stateIsLocal: function(key) {

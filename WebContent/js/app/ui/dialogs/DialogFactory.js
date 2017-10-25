@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -126,7 +126,7 @@ define([
 			domConstruct.create("label",{
 				innerHTML: label.content,
 				"for": label.elementId,
-				"class": label.labelClass
+				"class": label.labelClass + (label.justifiedLabel ? " Justified" : "")
 			}),
 			dom.byId("widget_" + label.elementId) ? dom.byId("widget_" + label.elementId) : dom.byId(label.elementId),
 			(label.labelClass.indexOf("left") >= 0 ? "before" : "after")
@@ -174,7 +174,7 @@ define([
 	// Unless you destroy and create a form widget between uses it will maintain its contents. 
 	// This helper method wipes out all of the values on a dialog's form elements. Form 
 	// elements are identified by being widgets of dijit/form and having a 'name' property.
-//
+	//
 	function _blankForm(thisDialog) {
 		var formValues = thisDialog.get("value");
 		for(var i in formValues) {
@@ -193,7 +193,20 @@ define([
 	// An event action which will take event arguments and dialog and UI element parameters
 	// and act accordingly
 	//
-	function _eventAction(e,thisEvent,btDialog,uiElementActions) {
+	function _eventAction(e,thisEvent,btDialog,uiElementActions,sourceElement) {
+		// Combo Boxes and CheckBoxes normally return a value representing the current selection,
+		// but we want our event to be an object. Convert if this is a Combo Box or Check Box 
+		// event
+		if(sourceElement.uiElementType === "COMBO_BOX" || sourceElement.uiElementType === "CHECK_BOX") {
+			var val = e;
+			e = {};
+			if(sourceElement.uiElementType === "COMBO_BOX") {
+				e.newVal = sourceElement.getItem(val);	
+			} else {
+				e.thisElement = sourceElement.value;
+				e.newVal = val;
+			}
+		}
 		declare.safeMixin(e,{
 			form: btDialog.get("value"),
 			selection: btDialog.gridSelected,
@@ -211,6 +224,11 @@ define([
 		if(btDialog.bundleMap) {
 			declare.safeMixin(e,{
 				bundleMap: btDialog.bundleMap
+			});
+		}
+		if(btDialog.bundleIn) {
+			declare.safeMixin(e,{
+				bundleIn: btDialog.bundleIn
 			});
 		}
 		
@@ -251,13 +269,9 @@ define([
 		
 		if(thisEvent.cmdFunction) {
 			thisEvent.cmdFunction(e);
-		} else if(thisEvent.cmdAction && thisEvent.cmdAction.indexOf("POP_") == 0) {
-			// POP commands are specific to a given ObjectID, so we have to request a 
-			// built method which we then execute; all other methods are general
-			ActionCollection[thisEvent.cmdAction](thisEvent.parameters.objID)(e);
 		} else if(thisEvent.cmdAction) {
-			ActionCollection[thisEvent.cmdAction](e);
-		}		
+			ActionCollection[thisEvent.cmdAction](e);	
+		}
 	};
 		
 	//////////////////////////
@@ -267,9 +281,9 @@ define([
 	// Intermediate method to combine the event and its argument with 
 	// any dialog and element-specific parameters
 	//
-	function _makeEventAction(thisEvent,btDialog,uiElementActions) {
+	function _makeEventAction(thisEvent,btDialog,uiElementActions,sourceElement) {
 		return function(e) {
-			_eventAction(e,thisEvent,btDialog,uiElementActions);
+			_eventAction(e,thisEvent,btDialog,uiElementActions,sourceElement);
 		};
 	};
 	
@@ -315,15 +329,18 @@ define([
 		var containerPane;
 		
 		if(thisCollection.elementType !== "ABSTRACT_CONTAINER") {
-			var containerParams = {
-				id: "content_pane_" + collexName.replace(/\s+/g,"_").replace(/[^A-Za-z0-9_]/g,"") + "_" + utils.makeId(),
-				"class":"FrameDialogContainerPane"
-			};
+			var containerParams = elementList.parameters;
+			if(!containerParams) {
+				containerParams = {
+					id: "content_pane_" + collexName.replace(/\s+/g,"_").replace(/[^A-Za-z0-9_]/g,"") + "_" + utils.makeId(),
+					"class":"FrameDialogContainerPane"
+				};
+			}
 			if(thisCollection.elementType === "LAYOUT_CONTAINER") {
 				containerParams.region = collexName;
 			} else if(thisCollection.elementType === "PANE") {
-				containerParams.region = thisCollection.layout.layoutParameters.region;
-			} else {
+				//containerParams.region = thisCollection.layout.layoutParameters.region;
+			} else if(!containerParams.title){
 				containerParams.title = collexName;
 			}
 			containerPane = new DialogDefs.getElement("PANE")(containerParams);
@@ -348,6 +365,13 @@ define([
 			utils.stringToBool(element);
 			utils.stringToBool(element.parameters);
 			utils.stringToBool(element.validity);
+			if(element.events) {
+				DojoArray.forEach(Object.keys(element.events),function(ev) {
+					if(element.events[ev].paramters) {
+						utils.stringToBool(element.events[ev].paramters);
+					}
+				});
+			}
 											
 			if(thisCollection.LocalElementParams && thisCollection.LocalElementParams[element.elementType]) {
 				declare.safeMixin(element.parameters,thisCollection.LocalElementParams[element.elementType]);
@@ -357,7 +381,8 @@ define([
 				labels.push({
 					content: element.parameters.label,
 					elementId: element.parameters.id,
-					labelClass: element.parameters.labelClass ? element.parameters.labelClass : "left" 
+					labelClass: element.parameters.labelClass ? element.parameters.labelClass : "left",
+					justifiedLabel: element.parameters.justifiedLabel
 				});
 			}
 						
@@ -383,6 +408,11 @@ define([
 				require(["dojo/dom-attr"],function(domAttr){
 					element.parameters.cnvContainerDomNodeId = element.parameters.id;
 					element.parameters.cnvWrapperDomNodeId = containerPane.domNode.id;
+					// All Artboards require a tabId, because when they are asking
+					// for a model they must indicate the tab that model is
+					// from, or tab index 0 (first tab) will be assumed, and an
+					// error will result if the model ID is not valid for that tab
+					element.parameters.tabId = btDialog.tabId;
 					containerPane.set("class","DrawingAreaContainer");							
 				});
 			}
@@ -391,7 +421,18 @@ define([
 				if(!btDialog.bundleMap) {
 					btDialog.bundleMap = {};
 				}
-				btDialog.bundleMap[element.parameters.bundleAs] = element.parameters.name; 
+				if(element.parameters.bundleIn !== null && element.parameters.bundleIn !== undefined) {
+					if(!btDialog.bundleIn) {
+						btDialog.bundleIn = {};
+					}
+					btDialog.bundleIn[element.parameters.bundleAs] = element.parameters.bundleIn;
+
+				}
+				btDialog.bundleMap[element.parameters.bundleAs] = element.parameters.name;
+			}
+			
+			if(element.availableValues) {
+				element.parameters.availableValues = element.availableValues;
 			}
 			
 			var childElement = new ElementType(element.parameters);
@@ -400,7 +441,7 @@ define([
 				btDialog.forImmediateDestruction.push(childElement);
 			}
 						
-			if(element.elementType === "SELECTION_GROUP" || element.elementType === "COMBO_BOX_TEXT") {
+			if(element.elementType === "COMBO_BOX_TEXT" || element.elementType === "COMBO_BOX_COLOR") {
 				btDialog.forImmediateDestruction.push(childElement);
 				childElement.buildValues(element.availableValues,element.parameters.valueOrder);
 			}
@@ -465,13 +506,22 @@ define([
 				if(element.events.hasOwnProperty(j)) {
 					var thisEvent = element.events[j];
 					var uiElementActions = _parseUiElementActions(thisEvent.uiElementActions);
-					var eventAction = _makeEventAction(thisEvent,btDialog,uiElementActions);
+					var eventAction = _makeEventAction(thisEvent,btDialog,uiElementActions,childElement);
 					var eventCallback = _makeEventCallback(eventAction,btDialog,!!uiElementActions.DIALOG_CLOSE,!!uiElementActions.BLANK_FORM);
 										
 					childElement.own(on(childElement,j,eventCallback));
 				}
 			}
 			
+			// If this is a ColorPicker element, it's opening value cannot be set until
+			// after the dialog is opened (the various DOM nodes must exist).
+			if(element.elementType === "COLOR_EDITOR") {
+				btDialog.registerOnShow(function() {
+					childElement.setColor();
+					childElement.moveFocus();
+				},true);
+			}
+
 			// Some elements have special placing requirements
 			
 			// Text messages are pushed onto an array and handled last
@@ -497,43 +547,37 @@ define([
 				}
 			// Selection groups and checkbox groups are special constructs that have to be placed
 			// manually
-			} else if(element.elementType === "SELECTION_GROUP" || element.elementType === "CHECKBOX") {
-				btDialog.forImmediateDestruction.push(childElement);
-				btDialog.registerOnShow(function() {
-					childElement.placeMe(containerPane.domNode,"first");
-					btDialog.resize();
-				});
 			} else {
 				// All other elements can be placed using addChild
-				var placeThis;
-				if(element.elementType.indexOf("COMBO_BOX") >= 0) {
-					placeThis = childElement.getComboBox();
-				} else {
-					placeThis = childElement;
-				}
-				
-				// Floating elements will fall wherever the containing pane has
-				// room for them. If we need an element to be on its own separate
-				// block, we place it in its own paragraph (this will force
-				// other elements to the next layout block)
-				//
-				// However, container elements should never be paragraphed, nor should
-				// any element that is a dgrid type (GRID and LISTSELECT types)
+				var placeThis = childElement;
 								
 				if(!element["float"] 
 					&& element.elementType.indexOf("_CONTAINER") < 0 && element.elementType !== "PANE" 
-					&& element.elementType !== "GRID" && element.elementType !== "LISTSELECT") {
-					var para = domConstruct.create("p",{"class":"FrameDialogElement"},containerPane.domNode,"last");
-					placeThis.placeAt(para);
+					&& element.elementType !== "GRID" && element.elementType !== "LISTSELECT" && !childElement.isLayout) {
+					
+					// If we need an element to be on its own separate block (float===false) we place it in its own 
+					// paragraph (this will force other elements to the next layout block)
+					//
+					// However, container elements should never be paragraphed, nor should any element that is a
+					// dgrid type (GRID and LISTSELECT types)
+					
+					placeThis.placeAt(domConstruct.create("p",{id: "contPara_"+placeThis.id, "class":"FrameDialogElement"},containerPane.domNode,"last"));
+				} else if(element.elementType.indexOf("_CONTAINER") < 0 || (thisCollection.elementType === "TAB_CONTAINER")) {
+					
 					// If our element isn't a container type, or, if it is but is going into a tab container, it needs to be placed
 					// into a container pane (because Tab Containers get information from the content pane about their panels).
-				} else if(element.elementType.indexOf("_CONTAINER") < 0 || (thisCollection.elementType === "TAB_CONTAINER")) {
-					containerPane.addChild(placeThis);
+					//
+					// We call placeAt, a _WidgetBase method, instead of addChild because extended child element types may
+					// have overridden methods which need to be triggered.
+					placeThis.set("class",((placeThis.get("class") ? placeThis.get("class") + " " : "") + "FloatingElement"));
+					
+					placeThis.placeAt(containerPane);
 				} else {
 					containerPane = placeThis;
 				}
 				
-				element.parameters.formattedValues && childElement.formatValues();
+				// If this is an element with value options which require formatting, do that now
+				element.parameters.formattedValues && childElement.formatValues && childElement.formatValues();
 			}
 			
 			// If this element is a container element (eg. a tab container), build out its children now
@@ -644,7 +688,7 @@ define([
 			container.selectChild(selected);	
 		}
 	};
-	
+		
 	///////////////////////////////
 	// _buildDialogContents
 	//////////////////////////////
@@ -705,7 +749,6 @@ define([
 		return btDialog;
 	};
 	
-	
 	//////////////////////////////////////
 	// _buildDialog
 	//////////////////////////////////////
@@ -728,6 +771,8 @@ define([
 		if(!dialogParams.isModal) {
 			dialogParams["class"]="nonModal";
 		}
+		
+		dialogParams.tabId = params.tabId;
 		
 		declare.safeMixin(dialogParams,{
 			title: dialogDef.title || dialogParams.title,
@@ -823,7 +868,36 @@ define([
 			
 			return _buildDialog(params);	
 		},
-		
+
+		// Generates the 'Keymap' dialog based on the KEYMAP definition in the DialogDefinitions module
+		makeKeymapDialog: function(params) {
+			if(!params) {
+				params = {};
+			}
+			params.definition = DialogDefs.getDialogDef("KEYMAP");
+			if(params.clientMode) {
+				var modelTab = params.definition.dialogElementCollections.mainPane.collectionElements.center[0].collectionElements["0"];
+				var menuTab = params.definition.dialogElementCollections.mainPane.collectionElements.center[0].collectionElements["1"];
+				var modelTreeTab = params.definition.dialogElementCollections.mainPane.collectionElements.center[0].collectionElements["2"];
+				
+				var tabContents = (params.clientMode === "EDITOR" ? TextMsgs.keyMapEditor : TextMsgs.keyMapViewer);
+				
+				modelTab.parameters.title = tabContents.modelTabTitle;
+				menuTab.parameters.title = tabContents.menuTabTitle;
+				modelTreeTab.parameters.title = tabContents.modelTreeTabTitle;
+				
+				modelTab.parameters.content = tabContents.modelTabContent;
+				menuTab.parameters.content = tabContents.menuTabContent;
+				modelTreeTab.parameters.content = tabContents.modelTreeTabContent;
+			}
+			
+			if(params.cancelAction) {
+				params.definition.cancel = params.cancelAction;	
+			}
+			
+			return _buildDialog(params);
+		},
+				
 		// Generates the 'About' dialog based on the ABOUT definition in the DialogDefinitions module
 		makeAboutDialog: function(params) {
 			if(!params) {
@@ -840,6 +914,63 @@ define([
 			}
 			
 			return _buildDialog(params);
+		},
+		
+		// Generates the 'Zoom Warning' dialog
+		makeZoomWarnDialog: function(params) {
+			if(!params) {
+				params = {};
+			}
+			params.definition = DialogDefs.getDialogDef("ZOOM_WARNING");
+			params.definition.dialogElementCollections.mainPane.collectionElements.center[0].parameters.content = TextMsgs.zoomWarning(params.type);
+
+			if(params.cancelAction) {
+				params.definition.cancel = params.cancelAction;	
+			}
+			
+			return _buildDialog(params);
+		},
+		
+		// If we are in Editor mode, generates the ColorEditor dialog
+		makeColorEdDialog: function(params) {
+			if(params.clientMode !== "EDITOR") {
+				return null;
+			}
+			
+			params = params || {};
+			params.definition = DialogDefs.getDialogDef("COLOR_EDITOR");
+			
+			if(params.cancelAction) {
+				params.definition.cancel = params.cancelAction;	
+			}
+			
+			if(params.openVal) {
+				params.definition.dialogElementCollections.mainPane.collectionElements.center[0].parameters.openVal = params.openVal;
+			}
+			
+			if(params.colorChoices) {
+				params.definition.dialogElementCollections.mainPane.collectionElements.center[0].parameters.colorChoices = params.colorChoices;
+			}
+			
+			return _buildDialog(params);
+		},
+		
+		makeNewStackPage:function(pageDef,forDialog,stackContainer,scParams,selectNewPage) {
+			var labels = new Array(), textMsgs = new Array();
+						
+			var newPage = _buildElementList(forDialog,[pageDef],"center",stackContainer,scParams,labels,textMsgs);
+			
+			stackContainer.addChild(newPage);
+			
+			DojoArray.forEach(textMsgs,function(message){
+				_addTextBlock(message);
+			});
+			
+			DojoArray.forEach(labels,function(label){
+				_makeLabel(label);
+			});
+			
+			selectNewPage && stackContainer.selectChild(newPage);
 		}
 	};
 });

@@ -1,7 +1,7 @@
 <BioTapestry version="5.0" >
   <timeAxisDefinition units="hours" />
   <workspace x="0" y="0" w="12000" h="9000" />
-  <startupView/>
+  <startupView model="{DiP}@bioTapC-bioTapE:3" />
   <fonts>
     <font name="small" type="serif" isBold="true" isItalic="false" size="20" />
     <font name="medium" type="serif" isBold="true" isItalic="false" size="28" />
@@ -160,6 +160,17 @@
       <link label="" src="9" targ="12" sign="+" id="26" targPad="0" />
     </links>
     <netOverlays>
+      <netOverlay id="51" name="Underlay 1" >
+        <netModules>
+          <netModule id="52" name="Module 1" >
+            <modMembers>
+              <modMember ref="3" />
+              <modMember ref="2" />
+              <modMember ref="1" />
+            </modMembers>
+          </netModule>
+        </netModules>
+      </netOverlay>
     </netOverlays>
     <notes>
       <note id="45" name="*" interactive="true" >Interactive Note Example</note>
@@ -218,26 +229,26 @@
       <groups>
         <group id="30" name="A" >
           <members>
-            <member ref="11:0" />
-            <member ref="6:0" />
-            <member ref="0:0" />
-            <member ref="7:0" />
-            <member ref="3:0" />
-            <member ref="5:0" />
-            <member ref="1:0" />
             <member ref="2:0" />
+            <member ref="5:0" />
+            <member ref="0:0" />
+            <member ref="3:0" />
+            <member ref="1:0" />
             <member ref="4:0" />
+            <member ref="7:0" />
+            <member ref="6:0" />
+            <member ref="11:0" />
           </members>
         </group>
         <group id="31" name="B" >
           <members>
+            <member ref="5:1" />
             <member ref="8:0" />
-            <member ref="13:0" />
-            <member ref="14:0" />
             <member ref="10:0" />
             <member ref="12:0" />
             <member ref="9:0" />
-            <member ref="5:1" />
+            <member ref="13:0" />
+            <member ref="14:0" />
           </members>
         </group>
       </groups>
@@ -303,31 +314,31 @@
       <groups>
         <group id="32" name="Region 1" >
           <members>
-            <member ref="0:0" />
-            <member ref="41:0" />
             <member ref="2:0" />
-            <member ref="3:0" />
+            <member ref="41:0" />
             <member ref="1:0" />
             <member ref="42:0" />
+            <member ref="0:0" />
+            <member ref="3:0" />
           </members>
         </group>
         <group id="33" name="Region 2" >
           <members>
             <member ref="13:0" />
-            <member ref="10:0" />
-            <member ref="9:0" />
             <member ref="12:0" />
-            <member ref="14:0" />
+            <member ref="9:0" />
+            <member ref="10:0" />
             <member ref="5:0" />
+            <member ref="14:0" />
           </members>
         </group>
         <group id="34" name="Region 3" >
           <members>
-            <member ref="7:0" />
             <member ref="11:0" />
             <member ref="5:1" />
             <member ref="4:0" />
             <member ref="6:0" />
+            <member ref="7:0" />
             <member ref="14:1" />
           </members>
         </group>
@@ -920,6 +931,19 @@
           <ntprop id="45" color="EX-dark-magenta" x="5060.0" y="3370.0" />
           <ntprop id="46" color="EX-dark-orange" x="5400.0" y="3370.0" />
         </ntprops>
+        <nOvrProps>
+          <nOvrProp ref="51" type="underlay" >
+            <nModProps>
+              <nModProp id="52" color="black" fillColor="white" type="contig" nameFade="slow" labelX="5000.0" labelY="3650.0" >
+                <nModPropShapes>
+                  <nModPropShape x="4760.0" y="3550.0" width="480.0" height="190.0" />
+                </nModPropShapes>
+              </nModProp>
+            </nModProps>
+            <nModLinkProps>
+            </nModLinkProps>
+          </nOvrProp>
+        </nOvrProps>
       </props>
     </layout>
   </layouts>
@@ -1346,4 +1370,70 @@
     <netOverlays>
     </netOverlays>
   </dynamicProxy>
+  <worksheetRuns>
+    <worksheetRun id="0" isCurr="true" state="notRun">
+      <serialNumbers>
+        <serNumSet dataNum="0" targNum="0" srcNum="0" />
+        <serialNum dataSrc="TimeCourse" value="0" />
+        <serialNum dataSrc="Topo" value="0" />
+        <serialNum dataSrc="Lineage" value="0" />
+      </serialNumbers>
+      <wsTracker>
+      </wsTracker>
+      <deepAnalysisLog />
+      <rulesetParams>
+        <globalRuleParameter name="diffSigThresh" value="false" />
+        <globalRuleParameter name="thresholdType" value="majorityOrTieWins" />
+        <globalRuleParameter name="thresholdSource" value="usePertThresh" />
+        <globalRuleParameter name="batchResolution" value="batchAverage" />
+        <globalRuleParameter name="dropSingleDataPoint" value="false" />
+        <rulesetPerRuleParams>
+          <ruleParameter rule="_BTORIG_RO" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_KFII" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_PEV" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CER" name="ruleManage.altMarkerThresh" value="2.5" />
+          <ruleParameter rule="_BTORIG_CER" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CER" name="ruleManage.useAltMarkerThresh" value="false" />
+          <ruleParameter rule="_BTORIG_OSR" name="ruleManage.applyAdjacency" value="true" />
+          <ruleParameter rule="_BTORIG_OSR" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_ISR" name="ruleManage.applyAdjacency" value="true" />
+          <ruleParameter rule="_BTORIG_ISR" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CROOEFS" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_SATP" name="ruleManage.applyMaxTimeGap" value="false" />
+          <ruleParameter rule="_BTORIG_SATP" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_SATP" name="ruleManage.maxTimeGap" value="3" />
+          <ruleParameter rule="_BTORIG_SATP" name="ruleManage.srcFirstRequired" value="false" />
+          <ruleParameter rule="_BTORIG_CROOE" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CPFO" name="ruleManage.applyMaxTime" value="true" />
+          <ruleParameter rule="_BTORIG_CPFO" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CPFO" name="ruleManage.maxTimeDiff" value="6" />
+          <ruleParameter rule="_BTORIG_ER" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_MPWNEI" name="ruleManage.applyAdjacency" value="true" />
+          <ruleParameter rule="_BTORIG_MPWNEI" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_MPWNEI" name="ruleManage.relaxNoData" value="false" />
+          <ruleParameter rule="_BTORIG_IOR" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_IOR" name="ruleManage.weakTrailingPertDisqual" value="true" />
+          <ruleParameter rule="_BTORIG_CREFR" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_RPO" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_NMSEI" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CUIP" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_CDNTP" name="ruleManage.allOrNothing" value="false" />
+          <ruleParameter rule="_BTORIG_CDNTP" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_PDFP" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_PDFP" name="ruleManage.enforceXregConsist" value="true" />
+          <ruleParameter rule="_BTORIG_PDFP" name="ruleManage.firstHopWiggleFactor" value="1.0" />
+          <ruleParameter rule="_BTORIG_PDFP" name="ruleManage.followingHopWiggleFactor" value="0.8" />
+          <ruleParameter rule="_BTORIG_PDFP" name="ruleManage.onceIsEnough" value="false" />
+          <ruleParameter rule="_BTORIG_PDFP" name="ruleManage.passThresh" value="0.5" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.applyRule" value="true" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.clusterTolerance" value="0.85" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.knownLigandTargetPolicy" value="ligandTargOnly" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.maxMissingData" value="2" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.multiRegionConsistencyPolicy" value="forceDirect" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.seedPolicy" value="stopAtSeed" />
+          <ruleParameter rule="_BTORIG_PSTFP" name="ruleManage.seedTolerance" value="0.8" />
+        </rulesetPerRuleParams>
+      </rulesetParams>
+    </worksheetRun>
+  </worksheetRuns>
 </BioTapestry>

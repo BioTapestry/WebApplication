@@ -19,13 +19,18 @@
 
 define([
     "./SelectionCommon",
-    "./overlay/NetModuleCommon"
+    "./overlay/NetModuleCommon",
+    "./overlay/NetOverlayCommon",
+    "./renderer/NetModuleRenderingSupport"
+
 ], function (
     SelectionCommon,
-    NetModuleCommon
+    NetModuleCommon,
+    NetOverlayCommon,
+    NetModuleRenderingSupportFactory
 ) {
     var RectangleSelectionSupportPrototype = {
-        rectangle_intersect_model: function(selection_rect, model) {
+        rectangleIntersectModel: function(selection_rect, model) {
             return _.reduce(SelectionCommon.getSelectableNodesForModel(model), function(found_nodes, node) {
                 var intersection = node.intersectRectangle(selection_rect);
 
@@ -37,23 +42,14 @@ define([
             }, []);
         },
 
-        rectangle_intersect_model_with_overlay: function(selection_rect, model, overlay_settings, overlay_alpha_settings) {
-            // TODO
-            // Should use CanvasRenderer._getOverlayForModel
-            var overlay = model.getOverlay(overlay_settings["id"]);
-            var enabled_modules = this.renderer.settings.overlay.enabled_modules;
-            var enabled_map = _.indexBy(enabled_modules, 'id');
-            var modules_list = _.filter(overlay.modules, function(module) {
-                return _.has(enabled_map, module['id']);
-            });
-
-            var model_intersection  = this.rectangle_intersect_model(selection_rect, model);
+        rectangleIntersectModelWithOverlay: function(selection_rect, model, module_support, overlay_alpha_settings) {
+            var model_intersection  = this.rectangleIntersectModel(selection_rect, model);
             var intersection_result = [];
 
             var all_visible_members_map = {};
 
-            var transparent_modules = _.filter(modules_list, function(module_node) {
-                return (enabled_map[module_node["id"]].show == true || overlay_alpha_settings.regionFillAlpha <= NetModuleCommon.Settings.INTERSECTION_CUTOFF)
+            var transparent_modules = _.filter(module_support.getVisibleNetModuleNodes(), function(module_node) {
+                return (module_support.isShownNetModule(module_node["id"]) || overlay_alpha_settings.regionFillAlpha <= NetModuleCommon.Settings.INTERSECTION_CUTOFF)
             });
 
             _.each(transparent_modules, function(module_node) {
@@ -102,28 +98,30 @@ define([
             return intersection_result;
         },
 
-        doRectangleSelection: function(selection_rect, model, overlay_settings, overlay_alpha_settings) {
+        doRectangleSelection: function(selection_rect, model, overlay_settings) {
+            var module_support = NetModuleRenderingSupportFactory.create(model, overlay_settings);
             var overlay;
+            var overlay_alpha_settings = overlay_settings.getAlphaSettings();
 
             // If overlay is enabled but no modules are enabled and intensity is 100, always return empty hit set
-            if (overlay_settings.id !== null &&
-                overlay_settings.enabled_modules.length == 0 &&
+            if (overlay_settings.isEnabled() &&
+                overlay_settings.getEnabledModules().length == 0 &&
                 overlay_alpha_settings.backgroundOverlayAlpha == 1) {
                 return null;
             }
 
-            if (overlay_settings.id !== null) {
-                overlay = model.getOverlay(overlay_settings["id"]);
+            if (overlay_settings.isEnabled()) {
+                overlay = model.getOverlay(overlay_settings.getEnabledID());
             }
 
-            if (overlay_settings.id === null ||
-                overlay_alpha_settings.backgroundOverlayAlpha <= 0.5 ||
-                (overlay_settings.id !== null && overlay.getOverlayType() == "TRANSPARENT") ||
-                (overlay_settings.id !== null && overlay.getOverlayType() == "UNDERLAY")) {
-                return this.rectangle_intersect_model(selection_rect, model, overlay_settings, overlay_alpha_settings);
+            if (overlay_settings.isEnabled() == false ||
+                overlay_alpha_settings.backgroundOverlayAlpha <= NetOverlayCommon.Thresholds.RECTANGLE_INTERSECTION_CUTOFF ||
+                (overlay_settings.isEnabled() && overlay.getOverlayType() == NetOverlayCommon.OverlayTypes.TRANSPARENT_TYPE) ||
+                (overlay_settings.isEnabled() && overlay.getOverlayType() == NetOverlayCommon.OverlayTypes.UNDERLAY_TYPE)) {
+                return this.rectangleIntersectModel(selection_rect, model);
             }
             else {
-                return this.rectangle_intersect_model_with_overlay(selection_rect, model, overlay_settings, overlay_alpha_settings);
+                return this.rectangleIntersectModelWithOverlay(selection_rect, model, module_support, overlay_alpha_settings);
             }
         }
     };

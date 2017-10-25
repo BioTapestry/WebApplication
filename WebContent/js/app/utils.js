@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -17,14 +17,23 @@
 **    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-define([],function(){
-	
+define([
+    "dojo/dom-construct"
+    ,"dojo/sniff"
+],function(
+	domConstruct
+	,has
+){	
 	
 	return {
+		///////////
+		// makeId
+		///////////
+		//
 		// Makes a random ID by selecting a string of 5 consecutive letters from a random
 		// start point in a randomly constructed string, then attaching that to a Date.now()
 		// with the first 5 digits replaced by those letters
-		
+		//
 		makeId: function() {
 			var idBase = Math.random().toString(36).replace(/[^a-z]+/g,'');
 			var start = Math.round(Math.random() * (idBase.length-5));
@@ -36,7 +45,7 @@ define([],function(){
 		/////////////////
 		//
 		// Helper method for a regexp that title cases a string
-		
+		//
 		toTitleCase: function(str) {
 		    return str.replace(/\w*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 		},
@@ -47,7 +56,7 @@ define([],function(){
 		//
 		// Some widget parameters must be of type boolean, and not string. This helper converts 
 		// all string instances of "true" and "false" to boolean equivalents.
-
+		//
 		stringToBool: function(these) {
 			for(var k in these) {
 				if(these.hasOwnProperty(k)) {
@@ -61,14 +70,47 @@ define([],function(){
 			}		
 		},
 		
-		objectPropertyCount: function(obj,countThese) {
-			var found = 0;
-			for(var i in obj) {
-				if(obj.hasOwnProperty(i) && (!countThese || countThese[i])) {
-					found++;
-				}
-			}
-			return found;
+		///////////////////////
+		// calcScrollbarSize
+		//////////////////////
+		//
+		//
+		calcScrollbarSize: function(parentTo) {
+			var testDiv = domConstruct.create("div",{
+				style: "width: 75px; height: 75px; overflow: scroll; top: -7777px; position: absolute;"
+			},(parentTo || "app_container"));
+			
+			var sbSize = (testDiv.offsetWidth - testDiv.clientWidth);
+			
+			domConstruct.destroy(testDiv);
+			
+			return sbSize;
+		},
+		
+		isPlusEquals: function(code) {
+			return (
+				(navigator.language === "ja" && code === 222) 
+				|| (navigator.language === "ja" && has("mozilla") && code === 160)
+				|| ((has("mozilla") || has("opera")) && code === 61)
+				|| ((has("ie") || has("trident") || has("webkit")) && code === 187)
+				|| ((has("mac") && has("mozilla")) && code === 107)
+			);
+		},
+		
+		isMinusUs: function(code) {
+			return (
+				(has("mozilla") && code === 173)
+				|| ((has("ie") || has("trident") || has("webkit")) && code === 189)
+				|| (has("opera") && code === 45)
+			);
+		},
+		
+		showClickError: function() {
+			var cursor = domStyle.get(window.document.body,"cursor");
+			domStyle.set(window.document.body,"cursor","not-allowed");
+			setTimeout(function(){
+				domStyle.set(window.document.body,"cursor",cursor);
+			},1000);
 		}
 		
 	};

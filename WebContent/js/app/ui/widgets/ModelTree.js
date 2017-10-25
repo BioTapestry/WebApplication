@@ -18,184 +18,288 @@
 */
 
 define([
-    "dojo/_base/lang",
     "dojo/_base/declare",
-    "dojo/mouse",
-    "dojo/dom",
     "dijit/Tree",
-    "dijit/Menu",
-    "dijit/MenuItem",
     "dojo/Deferred",
+    "dojo/store/Memory",
+    "dojo/store/Observable",
+    "dijit/tree/ObjectStoreModel",
     "dojo/on",
-    "controllers/ModelTreeController"
+    "dojo/dom-style",
+    "dojo/dom-construct",
+    "app/utils"
 ],function(
-	lang,
 	declare,
-	Mouse,
-	dom,
 	Tree,
-	Menu,
-	MenuItem,
 	Deferred,
+	Memory,
+	Observable,
+	ObjectStoreModel,
 	on,
-	treeController
+	domStyle,
+	domConstruct,
+	utils
 ) {
+	
+	// We define an 'empty tree' for initial Editor loading
+	var EMPTY_TREE = {
+		root: {
+			hasImage: false,
+			hasOverlays: false,
+			modelType: "SUPER_ROOT",
+			name: "",
+			nodeKey: {modType:"SUPER_ROOT"},
+			modType: "SUPER_ROOT",
+			childNodes: [{
+				ID: "bioTapA",
+				childNodes: [],
+				hasImage: false,
+				hasOverlays: false,
+				modelType: "DB_GENOME",
+				name: "Full Genome",
+				nodeKey: {id:"bioTapA", modType:"DB_GENOME"},
+				overlayDefs: []
+			}],
+			overlayDefs: []
+		}	
+	};
+	
+	// The action from ActionCollection which will trigger
+	// whenever the currently selected tree node is changed
+	var ONCHANGE_ACTION = "CLIENT_SET_MODEL";
+	
+	////////////////////////
+	// _buildModelStore
+	///////////////////////
+	//
+	// Given a data object, construct an ObjectStoreModel which can be used by this Tree. This
+	// does NOT set the resulting ObjectStoreModel as the store; that must be performed separately
+	//
+	function _buildModelStore(data) {
+		if(!data) {
+			data = EMPTY_TREE;
+		}
+		var treeStore = new Memory({
+			data: [{ID: "root", childNodes: data.root.childNodes}],
+	        getChildren: function(object){
+	        	return(object.childNodes || []);
+	        },
+	        getIdentity: function(item) {
+	        	return item.ID;
+	        }
+		});
+		
+		treeStore = new Observable(treeStore);					
+		
+		var treeModel = new ObjectStoreModel({
+			store: treeStore,
+	        query: {ID: 'root'},
+	        mayHaveChildren: function(item) {
+	        	return (item.childNodes && item.childNodes.length > 0);
+	        }
+	    });
+		
+		return treeModel;
+	};
 	
 	///////////////////////////////////
 	// ModelTree
 	//////////////////////////////////
 	//
-	// Wrapper with an extension of dijit/Tree which emits a special event when _adjustWidths is called.
-	
-	return declare([],{
-				
-		constructor: function() {
-			
-			////////////////////// PRIVATE MEMBERS ///////////////////////
-			
-			var resizeDeferred = new Deferred();
-												
-			var treeContextMenu,modelHierarchyTree,treeModel,treeDisablingOverlay;
-			
-			var asyncLoadedTree = null;
-			
-			var modelTree = declare([Tree],{
-				_adjustWidths: function() {
-					this.inherited(arguments);
-					this.emit("treeload",{cancelable: true, bubbles: true});
-				}
-			});
+	// Extension of dijit/Tree:
+	// 
+	// - Event emitted when _adjustWidths is called
+	// - Method for being set disabled which will render the tree unclickable
+	// - Refresh method which will reload the tree with new data
+	// - Work-arounds for node selection/clicking bug
+	// - Special resizing event to ensure the tree isn't initially scrolled in the horizontal direction
+	//
+	return declare([Tree],{
+		_tabId: null,
+		// Mark a right-clicked node for later use
+		_rightClickedNode: null,
+		// DIV to disable the tree in cases of masking
+		_disablingOverlay: null,
+		// Deferred indicating if the tree is done resizing
+		_resizeDeferred: null,
+		// Deferred indicating if the tree is done being loaded
+		_asyncLoadTree: null,
+		
+		disabled: null,
+		
+		_adjustWidths: function() {
+			this.inherited(arguments);
+			this.emit("widthsadjusted",{cancelable: true, bubbles: true});
+		},
 
-			var loadTree = function() {
-				asyncLoadedTree = new Deferred();
-				treeController.getModel().then(function(modelForTree){
-					treeModel = modelForTree;
-					modelHierarchyTree = new modelTree({
-						model: modelForTree,
-						id: "ModelTree",
-				        showRoot: false,
-				        style: "overflow: auto;",
-				        openOnClick: false,
-				        // Sometimes a click event will fail when a node press will not.
-				        // We don't want both click and nodepress to both fire, however, because
-				        // that could cause multiple model sets. For now, bind to node press
-				        // and not click.
-				        /*
-				        onClick: function(item,node,event) {
-				        	console.debug("onclick for tree",item,node,event);
-				        	if(!this.disabled && !this.nodePressed) {
-				        		treeController.modelTreeOnClick(item);
-				        	}
-				        },
-				        */
-				        _onNodePress: function(nodeWidget,e) {
-				        	if(!this.disabled) {
-				        		treeController.modelTreeOnClick(nodeWidget.item);
-				        	}
-				        },
-				        getIconClass: function(item,opened){
-				            return ((item.childNodes && (item.childNodes.length > 0)) ? 
-			            		(opened ? "dijitFolderOpened" : 
-			            		"dijitFolderClosed") : "dijitLeaf");
-				        },
-				        getResizeDeferred: function() {
-							return resizeDeferred.promise;
-				        },
-				        treeRenderWidth: 0,
-						refresh: function(){
-							var self=this;
-							resizeDeferred = new Deferred();
-							var refreshAsync = new Deferred();
-							// We need to resize the container that holds the model tree any time the
-							// tree is rebuilt, because otherwise the tree will simply overflow. We
-							// do this only once, after reloading is completed.
-							require(["dojo/query","dojo/dom-style","views"],function(query,domStyle,BTViews){
-								self.own(
-									on.once(self,"treeload",function(e){
-										modelHierarchyTree.treeRenderWidth = query(".dijitTreeContainer","ModelTree")[0].clientWidth;
-										BTViews.resizeLeftContainer({w: modelHierarchyTree.treeRenderWidth+10});
-										console.debug("done resizing");
-										resizeDeferred.resolve();
-									})
-						    	);
-								self.dndController.selectNone();
-								
-								// If our store is JsonRest, close it so the model
-								// will call fetch() when we reload it.
-								//
-								// this.model.store.clearOnClose = true;
-							    // this.model.store.close();
-							    
-							    // Remove all nodes and their children
-							    delete self._itemNodesMap;
-							    self._itemNodesMap = {};
-							    self.rootNode.state = "UNCHECKED";
-							    delete self.model.root.childNodes;
-							    self.model.root.childNodes = null;
-							    self.rootNode.destroyRecursive();
-							    
-							    treeController.reloadModel().then(function(modelForTree){
-								    self.model = modelForTree;
-								    self.postMixInProperties();
-								    self._load();
-								    refreshAsync.resolve();
-							    });
-							});
-							return refreshAsync.promise;
-						},
-						autoExpand: true
+		_setDisabledAttr: function(val) {
+			domStyle.set(this._disablingOverlay,"display",val ? "block" : "none");
+			this.disabled = val;
+		},
+		
+		////////////////////////
+		// refresh
+		///////////////////////
+		//
+		// Delete the current tree contents and rebuild it from the data source
+		//
+		refresh: function(data){
+			var self=this;
+			this._resizeDeferred = new Deferred();
+			// We need to resize the container that holds the model tree any time the
+			// tree is rebuilt, because otherwise the tree will simply overflow. We
+			// do this only once, after reloading is completed.
+			self.own(
+				on.once(self,"widthsadjusted",function(e){
+					require(["dojo/query","views"],function(query,BTViews){
+						var containerNode = query(".dijitTreeContainer",this.id)[0];
+						self.treeRenderWidth = containerNode.clientWidth+10+(self.domNode.scrollHeight > self.domNode.clientHeight ? 15 : 0);
+						BTViews.resizeLeftContainer({w: self.treeRenderWidth+10},self._tabId);
+						self._resizeDeferred.resolve();
 					});
-					
-					modelHierarchyTree.dndController.singular = true;
-										
-					// Auto-widen the left container after we're done loading the ModelTree, so it will
-					// not be scrolled; we want to only do this once.
-					modelHierarchyTree.own(
-						on.once(modelHierarchyTree,"load",function(e){
-							require(["dojo/query","dojo/dom-style","views","dojo/dom-construct"],function(query,domStyle,BTViews,domConstruct){								
-								if(!treeDisablingOverlay) {
-									treeDisablingOverlay = domConstruct.create("div",
-										{
-											id: "modeltree_disabling",
-											style: "display: none;",
-											"class":"DisablingOverlay"
-										},modelHierarchyTree.domNode,"first"
-									);
-								}
-								modelHierarchyTree.treeRenderWidth = query(".dijitTreeContainer","ModelTree")[0].clientWidth;
-								BTViews.resizeLeftContainer({w: modelHierarchyTree.treeRenderWidth+10});
-								console.debug("done resizing");
-								resizeDeferred.resolve();
-							});
-						})
-			    	);	
-					asyncLoadedTree.resolve(modelHierarchyTree);
-				},function(err){
-					console.error("[ERROR] During tree load: " + err);
-				});
-			};
+				})
+	    	);
+			self.dndController.selectNone();
 			
-			////////////////////// PRIVILEGED MEMBERS ///////////////////////
+			// If our store is JsonRest, close it so the model
+			// will call fetch() when we reload it.
+			//
+			// this.model.store.clearOnClose = true;
+		    // this.model.store.close();
+		    
+		    // Remove all nodes and their children
+		    delete self._itemNodesMap;
+		    self._itemNodesMap = {};
+		    self.rootNode.state = "UNCHECKED";
+		    delete self.model.root.childNodes;
+		    self.model.root.childNodes = null;
+		    self.rootNode.destroyRecursive();
+		    
+		    self.model = _buildModelStore(data);
+		    self.postMixInProperties();
+		    self._load();
+		},
+		
+		///////////////////////
+		// selectNodeOnTree
+		//////////////////////
+		//
+		//
+		selectNodeOnTree: function(modelId) {
+			var self=this;
+			var selectAsync = new Deferred();
+			this._asyncLoadedTree.promise.then(function(){
+				var thisNode = self.getNodesByItem(modelId)[0];
+				self.focusNode(thisNode);
+				self._setSelectedItemAttr(modelId);
+				selectAsync.resolve();
+			});
+			return selectAsync.promise;
+		},
+		
+		////////////
+		// getRoot
+		///////////
+		//
+		//
+		getRoot: function() {
+			return this.model.root.childNodes[0].ID;
+		},
+	
+		getResizeDeferred: function() {
+			return this._resizeDeferred.promise;
+        },
+
+		postCreate: function() {
+			var self=this;
+			this.inherited(arguments);
+			this._disablingOverlay = domConstruct.create("div",{
+				id: "modeltree_disabling_"+this.id,
+				style: "display: none;",
+				"class":"DisablingOverlay"
+			},self.domNode,"first");
 			
-			this.maskTree = function(maskOn) {
-				asyncLoadedTree.promise.then(function(tree){
-					require(["dojo/dom-style"],function(domStyle){
-						tree.set("disabled",!!maskOn);
-						treeDisablingOverlay && domStyle.set(treeDisablingOverlay,"display",maskOn ? "block" : "none");
+			// The ModelTree does not support multiple selection
+			this.dndController.singular = true;
+			
+			// Auto-widen the left container after we're done loading the ModelTree, so it will
+			// not be scrolled; we want to only do this once.
+			this.own(
+				on.once(self,"load",function(e){
+					require(["dojo/query","dojo/dom-style","views"],function(query,domStyle,BTViews){
+						var containerNode = query(".dijitTreeContainer",this.id)[0];
+						self.treeRenderWidth = containerNode.clientWidth+10+(self.domNode.scrollHeight > self.domNode.clientHeight ? 15 : 0);
+						BTViews.resizeLeftContainer({w: self.treeRenderWidth},self._tabId);
+						self._resizeDeferred.resolve();
 					});
-				});
-			};
-		    
-		    this.getModelHierarchyTree = function() {
-		    	if(!asyncLoadedTree) {
-		    		loadTree();
-		    	}
-		    	return asyncLoadedTree.promise;
-		    };
-		    
-		    this.setTreeWidget = function() {
-		    	treeController.setTreeWidget(modelHierarchyTree);
-		    };
-		} // constructor
-	});  // declare
+				})
+	    	);	
+			
+			self._asyncLoadedTree.resolve();
+		},
+		
+		//////////////
+		// maskTree
+		/////////////
+		//
+		// Mask (disable) the tree
+		maskTree: function(maskOn) {
+			var self=this;
+			self._asyncLoadedTree.promise.then(function(){
+				self.set("disabled",!!maskOn);
+			});
+		},
+		
+		constructor: function(params) {
+			
+			var self=this;
+			params.id = "modeltree_"+(params.id || utils.makeId());
+			
+	        params.showRoot = false;
+	        params.style = "overflow: auto;";
+	        params.openOnClick = false;
+	        
+	        // Sometimes a click event will fail when a node press will not.
+	        // We don't want both click and nodepress to both fire, however, because
+	        // that could cause multiple model sets. For now, bind to node press
+	        // and not click.
+	        /*
+	        params.onClick = function(item,node,event) {
+	        	console.debug("onclick for tree",item,node,event);
+	        	if(!this.disabled && !this.nodePressed) {
+	        		treeController.modelTreeOnClick(item);
+	        	}
+	        },
+	        */
+	        params._onNodePress = function(nodeWidget,e) {
+	        	if(!this.disabled) {
+	    			if(nodeWidget && nodeWidget.item && nodeWidget.item.ID) {
+	    				require(["controllers/ActionCollection"],function(ActionCollection){
+	    					ActionCollection[ONCHANGE_ACTION]({modelId: nodeWidget.item.ID});	
+	    				});
+	    			}
+	        	}
+	        };
+	        params.getIconClass = function(item,opened){
+	            return ((item.childNodes && (item.childNodes.length > 0)) ? 
+            		(opened ? "dijitFolderOpened" : "dijitFolderClosed") : "dijitLeaf");
+	        };
+	        params.treeRenderWidth = 0;
+
+	        params.autoExpand = true;
+	        
+	        params.model = _buildModelStore(params.rawTreeData);
+			
+			this._tabId = params.tabId;
+			
+			this._resizeDeferred = new Deferred();
+												
+			this._asyncLoadedTree = new Deferred();
+			
+			this.disabled = false;
+	        
+			// super()
+			this.inherited(arguments);
+		}
+	});
 });  // define 

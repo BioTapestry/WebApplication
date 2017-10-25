@@ -20,80 +20,76 @@ define([
     "./renderer/RenderingContext",
 
     "./overlay/NetModuleCommon",
-    "./renderer/NodeMoveContext"
+    "./overlay/NetOverlayCommon",
+    "./renderer/NodeMoveContext",
+    "./renderer/NetModuleRenderingSupport"
+
 ], function (
     RenderingContextFactory,
 
     NetModuleCommon,
-    NodeMoveContextFactory
-) {
-    var TRANSPARENT_TYPE = "TRANSPARENT",
-        OPAQUE_TYPE = "OPAQUE",
-        UNDERLAY_TYPE = "UNDERLAY";
+    NetOverlayCommon,
+    NodeMoveContextFactory,
+    NetModuleRenderingSupportFactory
 
+) {
     var OverlaySupportPrototype = {
-        renderEnabledModulesForTransparentOverlay: function(rc, model, modules_list, enabled_modules, overlay_settings) {
-            var enabled = _.indexBy(enabled_modules, 'id');
+        renderEnabledModulesForTransparentOverlay: function(rc, model, module_support, alpha_settings) {
             var ctx = rc.getCanvasContext();
 
             ctx.globalCompositeOperation = "source-over";
 
-            _.each(modules_list, function(module) {
-                var show = enabled[module.id].show;
-                var quickFade = module.getNameFadeMode() == NetModuleCommon.Properties.FADE_QUICKLY;
-                var fill_alpha = show ? 0.0 : overlay_settings.regionFillAlpha;
-                var label_alpha = quickFade ? overlay_settings.regionLabelAlpha : overlay_settings.regionBoundaryAlpha;
-
-                if (!show) {
-                    module.renderFills(rc, fill_alpha);
+            _.each(module_support.getVisibleNetModuleNodes(), function(module_node) {
+                var show_module = module_support.isShownNetModule(module_node["id"]);
+                var quickFade = module_node.getNameFadeMode() == NetModuleCommon.Properties.FADE_QUICKLY;
+                var fill_alpha = show_module ? 0.0 : alpha_settings.regionFillAlpha;
+                var label_alpha = quickFade ? alpha_settings.regionLabelAlpha : alpha_settings.regionBoundaryAlpha;
+                if (! show_module) {
+                    module_node.renderFills(rc, fill_alpha);
                 }
 
-                module.renderEdges(rc, overlay_settings.regionBoundaryAlpha);
-
-                module.renderLabel(rc, label_alpha);
+                module_node.renderEdges(rc, alpha_settings.regionBoundaryAlpha);
+                module_node.renderLabel(rc, label_alpha);
             }, this);
         },
 
-        transparentOverlayRender: function(model, linkages, modules_list, enabled_modules, overlay_settings) {
+        transparentOverlayRender: function(model, linkages, module_support, alpha_settings) {
             var null_nmc = NodeMoveContextFactory.create(null, false, null, null, null);
-            var rc = RenderingContextFactory.create(model, this.renderer.ctx, 'MODEL_NODEGROUPS', null_nmc, overlay_settings);
+            var rc = RenderingContextFactory.create(model, this.renderer.ctx, 'MODEL_NODEGROUPS', null_nmc, alpha_settings);
 
-            this.renderEnabledModulesForTransparentOverlay(rc, model, modules_list, enabled_modules, overlay_settings);
+            this.renderEnabledModulesForTransparentOverlay(rc, model, module_support, alpha_settings);
 
             _.each(linkages, function(linkage_node) {
-                linkage_node.render(rc, overlay_settings.regionBoundaryAlpha, enabled_modules, null);
+                linkage_node.render(rc, alpha_settings.regionBoundaryAlpha, module_support, null);
             });
 
             this.renderer.ctx.globalAlpha = 1.0;
         },
 
-
-        renderEnabledOpaqueModuleFills: function(rc, model, modules_list, enabled_modules, ctx, overlay_settings) {
-            _.each(modules_list, function(module) {
+        renderEnabledOpaqueModuleFills: function(rc, model, module_support, ctx) {
+            _.each(module_support.getVisibleNetModuleNodes(), function(module) {
                  ctx.globalCompositeOperation = "destination-out";
                  module.renderFills(rc, 1.0);
             });
         },
 
-        renderEnabledModulesForOpaqueOverlay: function(rc, model, modules_list, enabled_modules, linkages, ctx, overlay_settings) {
-            var enabled = _.indexBy(enabled_modules, 'id');
+        renderEnabledModulesForOpaqueOverlay: function(rc, model, module_support, linkages, ctx, alpha_settings) {
+            _.each(module_support.getVisibleNetModuleNodes(), function(module_node) {
+                var show = module_support.isShownNetModule(module_node.id);
 
-            _.each(modules_list, function(module) {
-                var show = enabled[module.id].show;
-
-                module.render(rc, show, overlay_settings);
+                module_node.render(rc, show, alpha_settings);
             });
 
             _.each(linkages, function(linkage_node) {
-                linkage_node.render(rc, overlay_settings.regionBoundaryAlpha, enabled, null);
+                linkage_node.render(rc, alpha_settings.regionBoundaryAlpha, module_support, null);
             });
         },
 
-        opaqueOverlayRender: function (model, linkages, group_rects, modules_list, enabled_modules, overlay_settings) {
+        opaqueOverlayRender: function (model, linkages, group_rects, module_support, alpha_settings) {
             var save_ctx = this.renderer.ctx;
             var null_nmc = NodeMoveContextFactory.create(null, false, null, null, null);
-            var rc = RenderingContextFactory.create(model, this.renderer.ovr_ctx, 'MODEL_NODEGROUPS', null_nmc, overlay_settings);
-            var rc_drill = RenderingContextFactory.create(model, this.renderer.temp_ctx, 'MODEL_NODEGROUPS', null_nmc, overlay_settings);
+            var rc = RenderingContextFactory.create(model, this.renderer.ovr_ctx, 'MODEL_NODEGROUPS', null_nmc, alpha_settings);
+            var rc_drill = RenderingContextFactory.create(model, this.renderer.temp_ctx, 'MODEL_NODEGROUPS', null_nmc, alpha_settings);
 
             // TODO
             // Detailed documentation of the overlay rendering part of the pipeline
@@ -124,10 +120,8 @@ define([
             this.renderEnabledOpaqueModuleFills(
                 rc,
                 model,
-                modules_list,
-                enabled_modules,
-                this.renderer.ovr_ctx,
-                overlay_settings
+                module_support,
+                this.renderer.ovr_ctx
             );
 
             // Drill
@@ -142,7 +136,7 @@ define([
             this.renderer.ctx.save();
             this.renderer.ctx.setTransform(1, 0, 0, 1, 0, 0);
             this.renderer.ctx.globalCompositeOperation = "source-over";
-            this.renderer.ctx.globalAlpha = overlay_settings.backgroundOverlayAlpha;
+            this.renderer.ctx.globalAlpha = alpha_settings.backgroundOverlayAlpha;
             this.renderer.ctx.drawImage(this.renderer.config.overlay_canvas.element, 0, 0);
             this.renderer.ctx.restore();
 
@@ -154,7 +148,7 @@ define([
             // The last "source-over" compositing operation leaves the canvas blank
             // if no modules are rendered, so bail out in the case that no modules
             // are enabled.
-            if (modules_list.length == 0) {
+            if (module_support.getVisibleNetModuleNodes().length == 0) {
                 return;
             }
 
@@ -169,11 +163,10 @@ define([
             this.renderEnabledModulesForOpaqueOverlay(
                 rc,
                 model,
-                modules_list,
-                enabled_modules,
+                module_support,
                 linkages,
                 this.renderer.ovr_ctx,
-                overlay_settings
+                alpha_settings
             );
 
             // Drill
@@ -193,38 +186,29 @@ define([
             this.renderer.ctx.restore();
         },
 
-        underlayRenderIfEnabled: function(model, overlay, overlay_settings) {
-            var type = overlay.ovrtype,
-                enabled_modules = this.renderer.settings.overlay.enabled_modules,
-                enabled_map = _.indexBy(enabled_modules, 'id'),
-                modules_list = _.filter(overlay.modules, function(module) {
-                    return _.has(enabled_map, module['id']);
-                });
+        overlayRender: function(model, overlay, overlay_settings, do_underlay) {
+            var module_support = NetModuleRenderingSupportFactory.create(model, overlay_settings);
+            var type = overlay.getOverlayType();
 
-            if (type == UNDERLAY_TYPE) {
-                this.transparentOverlayRender(model, overlay.linkages, modules_list, enabled_map, overlay_settings);
+            if (type == NetOverlayCommon.OverlayTypes.TRANSPARENT_TYPE) {
+                this.transparentOverlayRender(model, overlay.getLinkages(), module_support, overlay_settings.getAlphaSettings());
             }
-        },
-
-        overlayRender: function(model, overlay, overlay_settings) {
-            var type = overlay.ovrtype,
-                enabled_modules = this.renderer.settings.overlay.enabled_modules,
-                enabled_map = _.indexBy(enabled_modules, 'id'),
-                modules_list = _.filter(overlay.modules, function(module) {
-                    return _.has(enabled_map, module['id']);
-                });
-
-            if (type == TRANSPARENT_TYPE) {
-                this.transparentOverlayRender(model, overlay.linkages, modules_list, enabled_map, overlay_settings);
+            else if (type == NetOverlayCommon.OverlayTypes.OPAQUE_TYPE) {
+                this.opaqueOverlayRender(model, overlay.getLinkages(), overlay.getGroupRectangles(), module_support, overlay_settings.getAlphaSettings());
             }
-            else if (type == OPAQUE_TYPE) {
-                this.opaqueOverlayRender(model, overlay.linkages, overlay.group_rects, modules_list, enabled_map, overlay_settings);
-            }
-            else if (type == UNDERLAY_TYPE) {
-                // Do nothing, as an enabled underlay has been already rendered
+            else if (type == NetOverlayCommon.OverlayTypes.UNDERLAY_TYPE) {
+                if (do_underlay) {
+                    this.transparentOverlayRender(model, overlay.getLinkages(), module_support, overlay_settings.getAlphaSettings());
+                }
             }
             else {
-                console.error("Unknown overlay type \'" + type + "\' in overlay \'" + overlay.id + "\'");
+                throw {
+                    name: 'Unknown Overlay Type Error',
+                    level: 'OverlayRenderFunctions',
+                    message: 'Invalid overlay type ' + type + ', must be between 0.0 and 1.0',
+                    htmlMessage: "Unknown overlay type \'" + type + "\' in overlay \'" + overlay.id + "\'",
+                    toString: function(){return this.name + ": " + this.message;}
+                };
             }
         }
     };

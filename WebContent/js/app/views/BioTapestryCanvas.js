@@ -18,6 +18,7 @@
 */
 
 define([
+    // Dojo dependencies
     "dojo/sniff",
     "dojo/throttle",
     "dojo/debounce",
@@ -34,14 +35,19 @@ define([
     "dijit/Tooltip",
     "dijit/registry",
     "dojo/aspect",
+    "dojo/keys",
+    // BT dependencies
     "widgets/BTContextMenus",
     "controllers/ArtboardController",
     "controllers/ZoomController",
     "./renderer/CanvasRenderer",
     "controllers/HitPriority",
-    "app/utils"
+    "app/utils",
+    "static/ErrorMessages",
+    "views/GrnModelMessages"
 ],function(
-	sniff,
+    // Dojo dependencies
+	has,
 	throttle,
 	debounce,
 	declare,
@@ -57,13 +63,20 @@ define([
 	Tooltip,
 	registry,
 	aspect,
+	keys,
+    // BT dependencies
 	BTContextMenus,
 	ArtboardController,
 	ZoomController,
     CanvasRendererFactory,
     HitPriority,
-    utils
+    utils,
+    ErrMsgs,
+    GrnModelMsgs
 ) {
+		
+	// The default zoom 'level' (array index)
+	var DEFAULT_ZOOM_LEVEL = 5;
 					
 	// A CanvasRenderer object, which will parse a JSON model and render it to a supplied
 	// canvas instance. The renderer is currently used as a single instance
@@ -71,34 +84,246 @@ define([
 	
 	// Amount to scroll by with the mousewheel
 	var WHEEL_SCROLL_VALUE = 25;
+
+	// Amount to scroll by with the keyboard up/down and left/right keys
+	var KB_SCROLL_VALUE = 25;
 	
 	// Throttle rate of redrawing
-	var THROTTLE_RATE = 25;
-	// Debounce delay
-	var DEBOUNCE_DELAY = 55;
+	var REDRAW_THROTTLE_RATE = 25;
+	// Debounce delay of redrawing
+	var REDRAW_DEBOUNCE_DELAY = 55;
 	
-	// Minimum movement required to count as a mousemove
-	var MIN_MOVEMENT = 3;
-	
-	// Throttling rate for the tooltip event
-	var TOOLTIP_THROTTLE_RATE = 150;
-	
-	// Throttling rate for the drag-selection event
-	var DRAGSEL_MOVE_THROTTLE_RATE = 30;
-	
-	// Some versions of IE require a scrollbar to be a minimum of 18px in size. 19px accounts for 1px of border.
+	// Some versions of IE require a scrollbar to be a minimum of 18px in size, so this is our minimum size in that case;
+	// otherwise, calculate them specifically
 	// *** If there are scrollbar functionality problems in IE, try adjusting this size first ***
-	var SCROLL_BAR_SIZE = 18;
+	var SCROLL_BAR_SIZE = (has("ie") || has("trident")) ? 18 : utils.calcScrollbarSize();
 	
+	var SCROLL_BAR_SPACE = SCROLL_BAR_SIZE+1;
 	
-	///////////////////////////////////
+	// GroupNodes are not zoomed
+	var GROUP_NODE_ZOOM = 1.0;
+	
+	// Minimum mouse delta required to qualify as a 'move'
+	var MIN_MOUSE_MOVE = 3;
+	
+	// Helper values for managing mouse clicks
+	var LEFT_MOUSE = "LEFT";
+	var RIGHT_MOUSE = "RIGHT";
+	
+	var KEYPRESS_SET = ["NONE","SHIFT","ALT","SHIFT_ALT","CTRL","SHIFT_CTRL","CTLR_ALT","SHIFT_CTRL_ALT"];
+	
+	/////////////// HELPER CLASSES /////////////// 
+	
+	////////////////////
+	// MouseHandlers
+	///////////////////
+	//
+	// Object for managing our various mouse handlers
+	// Stores the functions called by event handlers, and provides convenience
+	// methods for pausing and resuming groups of related handles
+	//
+	var MouseHandlers = declare(null,{
+		RIGHT: null,
+		LEFT: null,
+		HOVER: null,
+		constructor: function(params) {
+			this.LEFT = {
+				UP: {
+					NONE: null,
+					ALT: null,
+					SHIFT: null,
+					CTRL: null					
+				},
+				DRAG: {
+					CTRL: null,
+					NONE: {
+						windowMouseMove: null,
+						selBox: {
+							mouseUp: null,
+							mouseMove: null,
+							mouseUpCallback: null
+						},
+						callback: null,
+						pauseAll: function() {
+							this.windowMouseMove && this.windowMouseMove.pause();
+							this.selBox.mouseMove && this.selBox.mouseMove.pause();
+							this.selBox.mouseUp && this.selBox.mouseUp.pause();
+						},
+						resumeAll: function() {
+							this.windowMouseMove && this.windowMouseMove.resume();
+							this.selBox.mouseMove && this.selBox.mouseMove.resume();
+							this.selBox.mouseUp && this.selBox.mouseUp.resume();						
+						}
+					}
+				},
+				DOWN: {
+					NONE: null,
+					ALT: null,
+					SHIFT: null,
+					CTRL: null
+				}
+			};
+			
+			this.RIGHT = {
+				UP: {
+					NONE: null,
+					ALT: null,
+					SHIFT: null,
+					CTRL: null
+				}
+			};
+			
+			this.HOVER = {
+				note: null,
+				groupnode: null
+			};
+		}
+	});
+	
+	//////////////
+	// BTTooltip
+	/////////////
+	//
+	// Object which manages tooltip and their display
+	// 
+	var BTTooltip = declare(null,{
+		delay: null,
+		showAt: null,
+		showThis: null,
+		showAround: null,
+		padding: null,
+		fetch: null,
+		show: function(toShow,here) {
+			if(!toShow) {
+				console.warn("[WARNING] No tooltip to show, but called BTTooltip.show anyways.");
+				return;
+			}
+			this.showThis = toShow;
+			this.showAt = here;
+			this.showAround = {x: this.showAt.x, y: this.showAt.y, w: this.padding.x, h: this.padding.y};
+			Tooltip.show(this.showThis,this.showAround,["after"]);
+		},
+		hide: function() {
+			this.showThis && Tooltip.hide(this.showAround);
+			this.showThis = null;
+			this.showAround = null;
+			this.showAt = null;
+		},
+		isCurrentlyShown: function(toShow) {
+			if(this.showThis) {
+				return (JSON.stringify(toShow) === JSON.stringify(this.showThis));
+			}
+			return false;
+		},
+		constructor: function(params) {
+			
+		}
+	});
+	
+	/////////////////
+	// MouseStatus
+	////////////////
+	//
+	// Object which can be used by event handlers to track the status of the mouse, and note
+	// its coordinates when down and up events fire, which mouse was pressed down, define if the
+	// mouse has moved a minimum amount, etc.
+	//
+	var MouseStatus = declare(null,{
+		downX: null,
+		downY: null,
+		upX: null,
+		upY: null,
+		currX: null,
+		currY: null,
+		lastCheckedX: null,
+		lastCheckedY: null,
+		isDown: false,
+		which: null,
+		mouseDown: function(e) {
+			this.currX = this.downX = e.clientX;
+			this.currY = this.downY = e.clientY;
+    		this.upX = null;
+    		this.upY = null;
+    		this.which = mouse.isRight(e) ? RIGHT_MOUSE : LEFT_MOUSE;
+    		this.isDown = true;
+		},
+		mouseUp: function(e) {
+			this.upX = this.currX = e.clientX;
+			this.upY = this.currY = e.clientY;
+    		this.which = mouse.isRight(e) ? RIGHT_MOUSE : LEFT_MOUSE;
+    		this.isDown = false;
+		},
+		clear: function() {
+			this.currX = this.downX = this.upX = null;
+			this.currY = this.downY = this.upY = null;
+			this.isDown = false;
+			this.which = null;
+		},
+		// Method which tells you if the supplied event has moved more than MIN_MOUSE_MOVE
+		// from currX and/or currY.
+		//
+		// SPECIAL NOTE ABOUT REQUIRING MINIMUM MOVEMENT
+		// If you want to require a minimum movement under mousemove, as opposed to just making
+		// sure the mouse *didn't* move, you should consider one of the following:
+		// 	* Throttling mousemove itself (via on/throttle)
+		// 	* Throttling the rate the function itself is called, eg. on(node,"mousemove",throttle(callback,rate))
+		// 	* Storing a separate coordiante pair outside of the "mousemove" and using that to track qualifiying movements
+		// 
+		// These are necessary because during periods of slow mouse movement the difference from one move event to the 
+		// next can be as low as one pixel, making this method unhelpful
+		//
+		isMinMove: function(e) {
+			this.currX = (this.currX === null ? e.clientX : this.currX);
+			this.currY = (this.currY === null ? e.clientY : this.currY);
+			
+			return ((Math.abs(this.currX-e.clientX) > MIN_MOUSE_MOVE) || (Math.abs(this.currY-e.clientY) > MIN_MOUSE_MOVE));
+		},
+		constructor: function(params) {
+			
+		}
+	});
+	
+	// A drag-selection box class for drawing a box which can store its coordinates to be used
+	// in calculating its contents
+	var SelexBox = declare([],{
+		_domNode: null,
+		isShown: false,
+		show: function(where) {
+    		domStyle.set(this._domNode,{
+	    		display:"block",
+	    		top: where.y+"px",
+				left: where.x+"px",
+				width: where.w+"px",
+				height: where.h+"px"
+    		});	
+    		this.isShown = true;
+		},
+		cleanUp: function() {
+			this.isShown = false;
+    		domStyle.set(this._domNode,{
+	    		display:"none",
+	    		top:"0px",
+				left:"0px",
+				width:"0px",
+				height:"0px"
+    		});						
+		},
+		constructor: function(params) {
+			// We only ever need to have one selection box on the DOM
+			this._domNode = params.domNode || dom.byId("selexBox") || domConstruct.create("div",{id: "selexBox"},document.body); 
+		}
+	});
+	
+	///////////////////////
 	// BioTapestryCanvas
-	///////////////////////////////////
+	///////////////////////
 	//
-	// A module for rendering an ArtboardModel to an HTML5 canvas element
+	// An interface class which uses a Renderer to display an ArtboardModel on an HTML5 canvas element
 	//
-	
 	var BioTapestryCanvas = declare([Destroyable],{
+		
+		// The ZoomController instance for this BTCanvas
+		_zoomController: null,
 		
 		// Deferred to register callbacks against the initial load of the 
 		// renderer and canvas
@@ -116,15 +341,15 @@ define([
 		// Indicates whether or not the workspace will be drawn (white rectangle with a thick
 		// dark-gray border behind the model)
 		_willDrawWorkspace: true,
-		
-		// The type of NetworkModelController (GrnModelController, PathingModelController, etc.) 
-		// associated with this BTCanvas; a BTCanvas only ever interacts with one kind of 
-		// NetworkModelController
-		_networkModelController: null,
 							
 		// The true (unscaled) dimensions of the workspace. They do not change unless someone 
 		// sets them to new values (Editor-only function).
 		_workspaceDimensions: null,
+		
+		// In some cases, rendering to an off-DOM canvas and then swapping it into position can
+		// prevent screen-tearing and other undesirable results. Setting this to true
+		// will enable use of the _offCanvas and the relevant methods.
+		_bufferedCanvases: null,
 		
 		// _canvas is the currently displayed Canvas element
 		// _offCanvas is not currently displayed on the DOM
@@ -211,6 +436,20 @@ define([
 		// the ModelTree
 		_isPrimaryCanvas: null,
 		
+		_mouseHandlers: null,
+		
+    	_mouseStatus: null,
+		
+		_tooltip: null,
+		
+		_currentNote: null,
+		
+		_selexBox: null,
+		
+		_keysPressed: function(e) {
+			return KEYPRESS_SET[parseInt((e.ctrlKey ? "1" : "0") + (e.altKey ? "1" : "0") + (e.shiftKey ? "1" : "0"),2)];
+		},
+		
 		// function for removing the resizing aspect
 		_removeResizingAspect: function() {
 			this._resizingAspect && this._resizingAspect.remove();
@@ -233,8 +472,19 @@ define([
             		if(!self._lastWrapperSize) {
             			self._lastWrapperSize = {};
             		}
-            		self._lastWrapperSize.w = dom.byId(self._cnvWrapperNodeId).clientWidth;
-            		self._lastWrapperSize.h = dom.byId(self._cnvWrapperNodeId).clientHeight;
+            		
+        			// If a user 'zooms in' the browser UI, it can play havoc with the expected scrollbar size in non-IE browsers
+        			// Recalculate the needed size any time this is done
+        			if(!(has("ie") || has("trident"))) {
+            			SCROLL_BAR_SIZE = utils.calcScrollbarSize();
+            			SCROLL_BAR_SPACE = SCROLL_BAR_SIZE+1;
+            		}
+            		
+            		var cnvWrapper = dom.byId(self._cnvWrapperNodeId);
+            		// Never pick up sizing <= 0 because it means we are no longer being rendered
+            		// and it's not accurate
+            		self._lastWrapperSize.w = cnvWrapper.clientWidth || self._lastWrapperSize.w;
+            		self._lastWrapperSize.h = cnvWrapper.clientHeight || self._lastWrapperSize.h;
             		if(self.currentModel_ && self._rendererIsValid) {
             			self._drawCanvas();
         			} else {
@@ -244,6 +494,10 @@ define([
     				}
             	}
             });
+		},
+		
+		_currentModelId: function() {
+			return this.currentModel_.get("modelId_")+"_"+this._cnvContainerNodeId;
 		},
 		
 		/////////////////////////////
@@ -258,11 +512,11 @@ define([
 		_zoom: function(oldZoomLevel,newZoomLevel) {
 						
 			// A no-zoom-change operation will still trigger display optimization
-			// We treat this as newZoomLevel == oldZoomLevel and set it accordingly
+			// We treat this as newZoomLevel === oldZoomLevel and set it accordingly
 			newZoomLevel = (newZoomLevel !== undefined && newZoomLevel !== null ? newZoomLevel : oldZoomLevel);
 			
 			var zoomLevels = {
-				newZoomScale: ZoomController.getZoomValue(newZoomLevel),
+				newZoomScale: this._zoomController.getZoomValue(newZoomLevel),
 				oldZoomScale: this._currentZoomValue
 			};
 			
@@ -284,41 +538,67 @@ define([
 				top: scrollv.scrollTop
 			};
 			
-			this._clearCanvas();
-			this._canvasRenderer.context_setTransform(1, 0, 0, 1, 0, 0);	
-						
-			// Adjust the sizes of our virtual scrollbars
-			this._adjustScrolling(zoomLevels.newZoomScale);
+			var wrapperSize = {
+				w: (grnWrapper.clientWidth || this._lastWrapperSize.w),
+				h: (grnWrapper.clientHeight || this._lastWrapperSize.h)
+			};
 			
 			// if this zoom call is the result of the canvas DOM node being resized, 
 			// that will factor into our translation and scrolling; if not, this
 			// value will be 0
 			var grnResize = {
-				w: ((grnWrapper.clientWidth-SCROLL_BAR_SIZE)-this._canvas.width),
-				h: ((grnWrapper.clientHeight-SCROLL_BAR_SIZE)-this._canvas.height)
+				w: ((wrapperSize.w-SCROLL_BAR_SPACE)-this._canvas.width),
+				h: ((wrapperSize.h-SCROLL_BAR_SPACE)-this._canvas.height)
 			};
 			
+			this._clearCanvas();
+			this._canvasRenderer.context_setTransform(1, 0, 0, 1, 0, 0);
+						
+			// Adjust the sizes of our virtual scrollbars
+			this._adjustScrolling(zoomLevels.newZoomScale);
+						
 			var grnStyleChange = null;
+			
+			// Always assume we need to size the canvas to the image; wrapper resize
+			// events will override this if needed.
+			if(this.currentModel_.isGroupNode()) {
+				if(this.currentModel_.drawingObject_.workspace.w < wrapperSize.w-SCROLL_BAR_SPACE) {
+					this._canvas.width = wrapperSize.w-SCROLL_BAR_SPACE;
+				} else {
+					this._canvas.width = this.currentModel_.drawingObject_.workspace.w;
+				}
+				if(this.currentModel_.drawingObject_.workspace.h < wrapperSize.h-SCROLL_BAR_SPACE) {
+					this._canvas.height = wrapperSize.h-SCROLL_BAR_SPACE;
+				} else {
+					this._canvas.height = this.currentModel_.drawingObject_.workspace.h;
+				}
+			}
 			
 			// Don't set a new container style unless it's truly needed
 			if(grnResize.w !== 0) {
-				this._canvas.width = grnWrapper.clientWidth-SCROLL_BAR_SIZE;
+				if(!this.currentModel_.isGroupNode() || this.currentModel_.drawingObject_.workspace.w < wrapperSize.w-SCROLL_BAR_SPACE) {
+					this._canvas.width = wrapperSize.w-(SCROLL_BAR_SPACE);
+				} else {
+					this._canvas.width = this.currentModel_.drawingObject_.workspace.w;
+				}
 				if(grnStyleChange === null) {
 					grnStyleChange = {};
 				}
-				grnStyleChange.width = (grnWrapper.clientWidth-SCROLL_BAR_SIZE)+"px";
+				grnStyleChange.width = (wrapperSize.w-(SCROLL_BAR_SPACE))+"px";
 			}
 			if(grnResize.h !== 0) {
-				this._canvas.height = grnWrapper.clientHeight-SCROLL_BAR_SIZE;
+				if(!this.currentModel_.isGroupNode() || this.currentModel_.drawingObject_.workspace.h < wrapperSize.h-SCROLL_BAR_SPACE) {
+					this._canvas.height = wrapperSize.h-(SCROLL_BAR_SPACE);
+				} else {
+					this._canvas.height = this.currentModel_.drawingObject_.workspace.h;
+				}
 				if(grnStyleChange === null) {
 					grnStyleChange = {};
 				}
-				grnStyleChange.height = (grnWrapper.clientHeight-SCROLL_BAR_SIZE)+"px";
+				grnStyleChange.height = (wrapperSize.h-(SCROLL_BAR_SPACE))+"px";
 			}
 			
-			if(grnStyleChange !== null) {
-				domStyle.set(grn,grnStyleChange);	
-			}
+			grnStyleChange && domStyle.set(grn,grnStyleChange);
 			
 			// If there's no current model, we're done
 			if(!this.currentModel_) { return; }
@@ -334,35 +614,35 @@ define([
 			// If our proposed drawing area (worksapceDimensions times the scaling) is bigger
 			// than our actual canvas, we will be translating to that center
 			if(this._workspaceDimensions.width*zoomLevels.newZoomScale > this._canvas.width) {
-				if(this._scrollHandlers.scrollh === null) {
+				if(!this._scrollHandlers.scrollh.enabled) {
 					this._initScrollH(zoomLevels.newZoomScale);
 					currScroll.left=scrollh.scrollLeft;
 				} else {
 					// Adjust the scrollbars so that whatever was on the canvas center before this event is still
 					// under it after
-					scrollh.scrollLeft=Math.round(wsOnCnvCtr.x*((zoomLevels.newZoomScale/zoomLevels.oldZoomScale)-1))+currScroll.left-(Math.round(grnResize.w/4));
+					scrollh.scrollLeft=Math.round(wsOnCnvCtr.x*((zoomLevels.newZoomScale/zoomLevels.oldZoomScale)-1))+currScroll.left-(Math.round(grnResize.w/(2*(this._bufferedCanvases ? 2 : 1))));
 				}
 			} else {
 				// disable scrolling and translate to the center of the canvas
 				this._disableScrollH();
 				this._canvasTranslation.x = Math.round(this._canvas.width/2)
-					-((this.currentModel_.drawingObject_.workspace.x+(this.currentModel_.drawingObject_.workspace.w/2))*zoomLevels.newZoomScale);
+					-((this.currentModel_.drawingObject_.workspace.x+((this.currentModel_.drawingObject_.workspace.w)/2))*zoomLevels.newZoomScale);
 			}
 
 			if(this._workspaceDimensions.height*zoomLevels.newZoomScale > this._canvas.height) {
-				if(this._scrollHandlers.scrollv === null){
+				if(!this._scrollHandlers.scrollv.enabled){
 					this._initScrollV(zoomLevels.newZoomScale);
 					currScroll.top = scrollv.scrollTop;
 				} else {
 					// Adjust the scrollbars so that whatever was on the canvas center before this event is still
 					// under it after					
-					scrollv.scrollTop=Math.round(wsOnCnvCtr.y*((zoomLevels.newZoomScale/zoomLevels.oldZoomScale)-1))+currScroll.top-(Math.round(grnResize.h/4));
+					scrollv.scrollTop=Math.round(wsOnCnvCtr.y*((zoomLevels.newZoomScale/zoomLevels.oldZoomScale)-1))+currScroll.top-(Math.round(grnResize.h/(2*(this._bufferedCanvases ? 2 : 1))));
 				}
 			} else {
 				// disable scrolling and translate to the center of the canvas				
 				this._disableScrollV();
 				this._canvasTranslation.y = Math.round(this._canvas.height/2)
-					-((this.currentModel_.drawingObject_.workspace.y+(this.currentModel_.drawingObject_.workspace.h/2))*zoomLevels.newZoomScale);
+					-((this.currentModel_.drawingObject_.workspace.y+((this.currentModel_.drawingObject_.workspace.h)/2))*zoomLevels.newZoomScale);
 			}
 			
 			// The translation that is placed on the renderer must be adjusted by the scrollbars as well			
@@ -374,24 +654,86 @@ define([
 			this._canvasRenderer.context_scale(zoomLevels.newZoomScale,zoomLevels.newZoomScale);
 		},
 		
+		//////////////////////////
+		// _transformCanvas
+		/////////////////////////
+		//
+		// Specifically transform the Canvas element itself via the CSS3 transform property
+		//
+		_transformCanvas: function(property,value) {
+			var browserStyle = null;
+			if(has("webkit")) {
+				browserStyle = "-webkit-transform";
+			}
+			if(has("mozilla")) {
+				browserStyle = "-moz-transform";
+			}
+			// Double-check for both IE and Trident (IE engine)
+			if(has("ie") || has("trident")) {
+				browserStyle = "-ms-transform";
+			}
+			
+			var leftMargin = null,
+				topMargin = null;
+			
+			if(value && value < 1) {
+				var grnWrapper = dom.byId(this._cnvWrapperNodeId);
+				// If we are scaling the Canvas down to fit into the viewport, we want to set it to
+				// the full image size so the image is properly resized
+				leftMargin = (((grnWrapper.clientWidth-SCROLL_BAR_SPACE)-this.currentModel_.drawingObject_.workspace.w)/2);
+				topMargin = (((grnWrapper.clientHeight-SCROLL_BAR_SPACE)-this.currentModel_.drawingObject_.workspace.h)/2);
+			}
+			
+			var styleSet = {
+				transform: (value ? property+"("+value+","+value+")" : ""),
+			};
+			
+			if(browserStyle) {
+				styleSet[browserStyle] = (value ? property+"("+value+","+value+")" : "");
+			}
+			styleSet["margin-left"] = leftMargin && leftMargin < 0 ? leftMargin+"px" : "";
+			styleSet["margin-top"] = topMargin && topMargin < 0 ? topMargin+"px" : "";
+			
+			
+			domStyle.set(this._canvas,styleSet);
+
+		},
+		
+		///////////////////////////////
+		// _calculateGroupNodeScale
+		/////////////////////////////
+		//
+		//
+		_calculateGroupNodeScale: function() {
+			var grnWrapper = dom.byId(this._cnvWrapperNodeId);
+			if((grnWrapper.clientWidth-SCROLL_BAR_SPACE) < this.currentModel_.drawingObject_.workspace.w 
+				|| (grnWrapper.clientHeight-SCROLL_BAR_SPACE) < this.currentModel_.drawingObject_.workspace.h) {
+				return Math.min(((grnWrapper.clientWidth-SCROLL_BAR_SPACE)/this.currentModel_.drawingObject_.workspace.w),((grnWrapper.clientHeight-SCROLL_BAR_SPACE)/this.currentModel_.drawingObject_.workspace.h));
+			}
+			return null;
+		},
+				
+		////////////////////
+		// _showLoading
+		///////////////////
+		//		
 		// If the loading element does not exist, create it, and then show or hide it depending
 		// on the value of the hide variable
+		//
 		_showLoading: function(hide) {
-/*			
 			if(!this._loadingScreen) {
 				this._loadingScreen = domConstruct.create(
 					"div",{
 						id: "CanvasLoading",
-						width: this._canvas.width + "px",
-						height: this._canvas.height + "px",
-						innerHTML: "<p>Loading...</p>"
+						width: this._canvas.width,
+						height: this._canvas.height,
+						innerHTML: "<p><span id=\"CanvasLoadText\">Loading...</span></p>"
 					}
 				);
 				domStyle.set(this._loadingScreen,"display","none");
 				domConstruct.place(this._loadingScreen,dom.byId(this._cnvWrapperNodeId),"first");
 			}
 			domStyle.set(this._loadingScreen,{"display":(hide ? "none" : "block"),width:this._canvas.width + "px",height:this._canvas.height + "px"});
-*/
 		},
 		
 		/////////////////////////////
@@ -407,11 +749,13 @@ define([
 			var loadAsync = new Deferred();
 			this._canvasReady.promise.then(function(){
 				var names = {};
-				var entities = self._canvasRenderer.getAllSelectedMap(self.currentModel_.get("modelId_"));
+				var entities = self._canvasRenderer.getAllSelectedMap(self._currentModelId());
 				DojoArray.forEach(ids,function(id){
 					names[id] = entities[id].getName();
 				});
 				loadAsync.resolve(names);
+			},function(err){
+				console.error(ErrMsgs.CanvasReadyErr + " entity name retrieval!");
 			});
 			return loadAsync.promise;
 		},
@@ -437,9 +781,11 @@ define([
 			translatedHit.x -= this._canvas.getBoundingClientRect().left;
 			translatedHit.y -= this._canvas.getBoundingClientRect().top;
 			
+			var imgSize = (this.currentModel_.isGroupNode()) ? (this._calculateGroupNodeScale() || 1) : 1;
+						
 			// translate from canvas coordinates to unzoomed world coordinates
-			translatedHit.x = (translatedHit.x-(this._canvasTranslation.x-scrollh.scrollLeft))/(ZoomController.getZoomValue(this._currentZoomLevel));
-			translatedHit.y = (translatedHit.y-(this._canvasTranslation.y-scrollv.scrollTop))/(ZoomController.getZoomValue(this._currentZoomLevel));
+			translatedHit.x = ((translatedHit.x/imgSize)-(this._canvasTranslation.x-scrollh.scrollLeft))/(this._zoomController.getZoomValue(this._currentZoomLevel));
+			translatedHit.y = ((translatedHit.y/imgSize)-(this._canvasTranslation.y-scrollv.scrollTop))/(this._zoomController.getZoomValue(this._currentZoomLevel));
 			
 			return translatedHit;
 		},
@@ -452,12 +798,13 @@ define([
 		//
 		_clearCanvas: function() {
 			if(this._canvas) {
+				this._transformCanvas();
 				this._canvasRenderer.context_save();
 				
 				var grnWrapper = dom.byId(this._cnvWrapperNodeId);
 				
-				this._canvas.width = grnWrapper.clientWidth-SCROLL_BAR_SIZE;
-				this._canvas.height = grnWrapper.clientHeight-SCROLL_BAR_SIZE;
+				this._canvas.width = (grnWrapper.clientWidth || this._lastWrapperSize.w)-(SCROLL_BAR_SPACE);
+				this._canvas.height = (grnWrapper.clientHeight || this._lastWrapperSize.h)-(SCROLL_BAR_SPACE);
 
 				// Use the identity matrix while clearing the canvas
 				this._canvasRenderer.context_setTransform(1, 0, 0, 1, 0, 0);
@@ -476,14 +823,46 @@ define([
 		// Draw the workspace area behind a model.
 		//
 		_drawWorkspace: function() {
+			
+			var grnContainer = dom.byId(this._cnvContainerNodeId);
+			
+			if(this.currentModel_.isGroupNode()) {
+				domStyle.set(grnContainer,"background-color","white");
+				domStyle.set(this._canvas,"border","none");
+				return;
+			} 
+			
+			domStyle.set(grnContainer,"background-color","");
+			domStyle.set(this._canvas,"border","");			
+						
 			this._canvasRenderer.ctx.beginPath();
 			this._canvasRenderer.ctx.fillStyle = "white";
 			this._canvasRenderer.ctx.strokeStyle = "gray";
+			
+			// If no workspace dimensions are available then we just fill the canvas with a workspace
+			var width = this._workspaceDimensions.width  || this._canvas.width/this._currentZoomValue;
+			var height = this._workspaceDimensions.height || this._canvas.height/this._currentZoomValue; 
+			
+			// TODO: rendered item size != workspace size!
+			var centerX = 0, centerY = 0;
+						
+			if(this.currentModel_.drawingObject_.center_x !== null && this.currentModel_.drawingObject_.center_x !== undefined) {
+				centerX = this.currentModel_.drawingObject_.center_x;
+			} else {
+				centerX = Math.round(((this.currentModel_.drawingObject_.workspace.w)/2)/this._currentZoomValue);
+			}
+			
+			if(this.currentModel_.drawingObject_.center_y !== null && this.currentModel_.drawingObject_.center_y !== undefined) {
+				centerY = this.currentModel_.drawingObject_.center_y;
+			} else {
+				centerY = Math.round(((this.currentModel_.drawingObject_.workspace.h)/2)/this._currentZoomValue);
+			}			
+			
 			this._canvasRenderer.ctx.rect(
-				this.currentModel_.drawingObject_.center_x-Math.round(this._workspaceDimensions.width/2),
-				this.currentModel_.drawingObject_.center_y-Math.round(this._workspaceDimensions.height/2),
-				this._workspaceDimensions.width,
-				this._workspaceDimensions.height
+				centerX-Math.round(width/2),
+				centerY-Math.round(height/2),
+				width,
+				height
 			);
 			this._canvasRenderer.ctx.fill();
 			this._canvasRenderer.ctx.stroke();
@@ -499,8 +878,8 @@ define([
 		_updateOverlay: function() {
 			if(this.currentModel_) {
 				var overlay = this.currentModel_.get("overlay_") || {id: null};
-				this._canvasRenderer.setOverlayIntensity(overlay.id ? overlay.intensity : 1);
-				this._canvasRenderer.toggleOverlay(overlay);
+				this._canvasRenderer.setOverlayIntensity(this._currentModelId(),overlay.id ? overlay.intensity : 1);
+				this._canvasRenderer.toggleOverlay(this._currentModelId(),overlay);
 			}
 		},
 		
@@ -513,25 +892,33 @@ define([
 		_updateRegionToggles: function() {
 			if(this.currentModel_) {
 				var toggledRegions = this.currentModel_.get("toggledRegions_") || {};
-				toggledRegions && this._canvasRenderer.toggleGroupForModelID(this.currentModel_.get("modelId_"),Object.keys(toggledRegions));
+				toggledRegions && this._canvasRenderer.toggleGroupForModelID(this._currentModelId(),Object.keys(toggledRegions));
 			}
 		},
-		
 
+		////////////////////////////////
+		// _drawGroupNode
+		///////////////////////////////
+		//
+		// Primary drawing method for GroupNodes, which are special hitmap image sets. 
+		// 
+		_drawGroupNode: function() {
+			var scale = this._calculateGroupNodeScale();
+			this._drawWorkspace();
+            this._canvasRenderer.renderModelByIDFull(this._currentModelId());
+            this._transformCanvas("scale",scale);
+		},
+		
 		////////////////////////////////
 		// _drawModel
 		///////////////////////////////
 		//
-		// Primary drawing method. Draws the workspace (white rectangle), sets toggled regions and overlays, 
-		// then kicks off the Canvas Renderer draw functions.
+		// Primary drawing method for Grn/Pathing Models. Draws the workspace (white rectangle) if set to do so, 
+		// sets toggled regions and overlays, then kicks off the Canvas Renderer draw functions.
 		// 
 		_drawModel: function() {
-			console.debug("---Drawing Model " + this.currentModel_.get("modelId_") + "---");
-			
 			this._willDrawWorkspace && this._drawWorkspace();
-			this._canvasRenderer.renderModelByIDFull(this.currentModel_.get("modelId_"));
-			
-			console.debug("---Model Drawn "+ this.currentModel_.get("modelId_") + "---");
+			this._canvasRenderer.renderModelByIDFull(this._currentModelId());
 		},	
 		
 		///////////////////////////////
@@ -547,7 +934,13 @@ define([
 				if(self._overrideNavZoom) {
 					drawZoomMode = "NAV_MAINTAIN_ZOOM";
 				}
+				if(self.currentModel_.isGroupNode()) {
+					drawZoomMode = "NAV_ZOOM_TO_GROUP_NODE";
+				}
 				switch(drawZoomMode){
+					case "NAV_ZOOM_TO_GROUP_NODE":
+						self.zoomToWholeGroupNode();
+						break;
 					case "NAV_ZOOM_TO_EACH_MODEL":
 					case "FIRST_ZOOM_TO_CURRENT_MODEL":
 						self.zoomToWholeModel();
@@ -558,6 +951,9 @@ define([
 					case "FIRST_ZOOM_TO_WORKSPACE":
 						self.zoomToWholeWorkspace();
 						break;
+					case "ZOOM_TO_FULL_GROUP_NODE":
+						// TODO: if we don't allow 'zoom' on GroupNodes this will just be a zoom to 100%
+						//break;
 					case "NAV_MAINTAIN_ZOOM":
 					default:
 						self._drawCanvas();
@@ -566,26 +962,34 @@ define([
 			};
 			this._showLoading();
 			if(!modelId) {
-	    		self._updateOverlay();
-	    		self._updateRegionToggles();
-				if(withSelect) {
-					self._selectNodes(selectedNodes).then(drawWithZoom(zoomMode));
-				} else {
-					drawWithZoom(zoomMode);
-				}
-				asyncRedraw.resolve();
-				self._showLoading(true);				
-			} else {
-				self._loadModel(modelId).then(function(){
-		    		self._updateOverlay();
-		    		self._updateRegionToggles();
+				if(!self.currentModel_.isGroupNode()) {
+					self._updateOverlay();
+					self._updateRegionToggles();
 					if(withSelect) {
 						self._selectNodes(selectedNodes).then(drawWithZoom(zoomMode));
 					} else {
 						drawWithZoom(zoomMode);
 					}
+				} else {
+					drawWithZoom(zoomMode);
+				}
+				asyncRedraw.resolve();
+				
+			} else {
+				self._loadModel(modelId).then(function(){
+					if(!self.currentModel_.isGroupNode()) {
+						self._updateOverlay();
+						self._updateRegionToggles();
+						if(withSelect) {
+							self._selectNodes(selectedNodes).then(drawWithZoom(zoomMode));
+						} else {
+							drawWithZoom(zoomMode);
+						}
+					} else {
+						drawWithZoom(zoomMode);
+					}
 					asyncRedraw.resolve();
-					self._showLoading(true);
+
 				},function(err){
 					// Clear out both canvases
 					self._clearCanvas();
@@ -595,7 +999,13 @@ define([
 					// Reset our scrolling and disable it
 					self._adjustScrolling(self._currentZoomValue);
 					self._disableScrolling();
-					asyncRedraw.resolve();
+					// If there is no valid currentModel then we don't want to flag this as a successful redraw
+					// otherwise, we can.
+					if(self.currentModel_) {
+						asyncRedraw.resolve();
+					} else {
+						asyncRedraw.reject();	
+					}
 					// Hide the loading element
 					self._showLoading(true);
 				});
@@ -617,14 +1027,15 @@ define([
 		_loadModel: function(modelId) {
 			var self=this;
 			this._asyncModelLoader = new Deferred();
-			var loadingModel = (modelId ? 
+			var loadingModel = (modelId !== null && modelId !== undefined ? 
 				ArtboardController.getArtboardController(this._cnvContainerNodeId).getModel(modelId) 
 				: ArtboardController.getArtboardController(this._cnvContainerNodeId).getCurrentModel());
 			loadingModel.then(function(loadedModel){
 				if(!loadedModel) {
-					console.debug("no model for " + modelId);
 					self.currentModel_ = null;
-					self._asyncModelLoader.reject();
+					self._canvasIsReady = false;
+					self._canvasReady = new Deferred();
+					self._asyncModelLoader.reject("No model for " + modelId);
 				} else {
 					var oldModel = self.currentModel_;
 					self.currentModel_ = loadedModel;
@@ -641,22 +1052,41 @@ define([
 								|| loadedModel.vfgParent_ === oldModel.get("modelId_"))
 							);
 					}
-					
-					self._workspaceDimensions.width = loadedModel.drawingObject_.workspace.w; 
-					self._workspaceDimensions.height = loadedModel.drawingObject_.workspace.h;
-					
-					require([self._networkModelController],function(networkModelController){
-						if(!networkModelController.drawingObjIsCached(loadedModel.get("modelId_"))) {
-							self._canvasRenderer.addModel(
-								loadedModel.get("modelId_"),
-								loadedModel.drawingObject_.overlay_data,
-								loadedModel.drawingObject_.draw_layer_groups,
-								loadedModel.drawingObject_.fonts
-							);
-							networkModelController.setCachedInRenderer(loadedModel.get("modelId_"),true);
+										
+					self._workspaceDimensions.width = (loadedModel.isGroupNode() ? 0 : loadedModel.drawingObject_.workspace.w); 
+					self._workspaceDimensions.height = (loadedModel.isGroupNode() ? 0 : loadedModel.drawingObject_.workspace.h);
+
+					require(["controllers/ArtboardController","static/XhrUris"],function(ArtboardController,XhrUris){
+						var myAbC = ArtboardController.getArtboardController(self._cnvContainerNodeId);
+						if(!loadedModel.isGroupNode()) {
+							if(!myAbC.drawingObjIsCached(loadedModel.get("modelId_"))) {
+								self._canvasRenderer.addModel(
+									loadedModel.get("modelId_")+"_"+self._cnvContainerNodeId,
+									loadedModel.drawingObject_.overlay_data,
+									loadedModel.drawingObject_.draw_layer_groups,
+									loadedModel.drawingObject_.fonts
+								);
+								myAbC.setCachedInRenderer(loadedModel.get("modelId_"),true);
+							}
+							self._asyncModelLoader.resolve(loadedModel);
+							self._rendererIsValid = true;
+						} else {
+							var image_uri = XhrUris.groupnodeimg(self.currentModel_.get("modelId_"),ArtboardController.getArtboardController(self._cnvContainerNodeId).get("tabId_"));
+                            var clickmap_uri = XhrUris.groupnodemap(self.currentModel_.get("modelId_"),ArtboardController.getArtboardController(self._cnvContainerNodeId).get("tabId_"));
+
+                            if(!myAbC.drawingObjIsCached(loadedModel.get("modelId_"))) {
+                                self._canvasRenderer.addGroupNode(
+                                    loadedModel.get("modelId_")+"_"+self._cnvContainerNodeId,
+                                    loadedModel.drawingObject_.clickMap,
+                                    image_uri,
+                                    clickmap_uri,
+                                    loadedModel.drawingObject_.color_bounds_map
+                                );
+                                myAbC.setCachedInRenderer(loadedModel.get("modelId_"),true);
+                            }
+                            self._asyncModelLoader.resolve(loadedModel);
+                            self._rendererIsValid = true;
 						}
-						self._asyncModelLoader.resolve(loadedModel);
-						self._rendererIsValid = true;
 					});
 				}
 			},function(err){
@@ -671,15 +1101,15 @@ define([
 		////////////////////////////////////
 		//
 		// Resizes the virutal scrolling system, both the visible scrollbar area and the
-		// cnvw and cnvh DIVs which virtualizae the workspace size.
+		// cnvw and cnvh DIVs which virtualize the workspace size.
 		//
 		_adjustScrolling: function(currScale) {
 			var grnWrapper = dom.byId(this._cnvWrapperNodeId);
 			var scrollh = dom.byId("scrollh_" + this._cnvContainerNodeId);
 			var scrollv = dom.byId("scrollv_" + this._cnvContainerNodeId);	
-						
-			domStyle.set(scrollh,"width",(grnWrapper.clientWidth-SCROLL_BAR_SIZE) + "px");
-			domStyle.set(scrollv,"height",(grnWrapper.clientHeight-SCROLL_BAR_SIZE) + "px");
+			
+			domStyle.set(scrollh,{width: ((grnWrapper.clientWidth || this._lastWrapperSize.w)-SCROLL_BAR_SPACE) + "px",height: SCROLL_BAR_SIZE+"px"});
+			domStyle.set(scrollv,{height: ((grnWrapper.clientHeight  || this._lastWrapperSize.h)-SCROLL_BAR_SPACE) + "px",width: SCROLL_BAR_SIZE+"px"});
 						
 			var cnvw = dom.byId("cnvw_" + this._cnvContainerNodeId);
 			domStyle.set(cnvw,"width",this._workspaceDimensions.width*currScale + "px");
@@ -704,8 +1134,8 @@ define([
 				y: point.y
 			};
 			
-			wsCoords.x = (ZoomController.getZoomValue(this._currentZoomLevel) * point.x) + this._canvasTranslation.x;
-			wsCoords.y = (ZoomController.getZoomValue(this._currentZoomLevel) * point.y) + this._canvasTranslation.y;
+			wsCoords.x = (this._zoomController.getZoomValue(this._currentZoomLevel) * point.x) + this._canvasTranslation.x;
+			wsCoords.y = (this._zoomController.getZoomValue(this._currentZoomLevel) * point.y) + this._canvasTranslation.y;
 			
 			scrollh.scrollLeft = wsCoords.x-(this._canvas.width/2);
 			scrollv.scrollTop = wsCoords.y-(this._canvas.height/2);
@@ -717,147 +1147,81 @@ define([
 			
 		// Set up the vertical virtual scroll element.
 		_initScrollV: function(zoomScale) {
-			var scrollv = dom.byId("scrollv_" + this._cnvContainerNodeId);
+
 			var self=this;
+			var scrollv = dom.byId("scrollv_" + this._cnvContainerNodeId);
 			
-			var scrollDraw = function(e) {
-        		if(self._rendererIsValid) {
-        			self._drawCanvas();
-        		}
-        	};
-			
+			this._scrollHandlers.scrollv.enabled = true;
         	scrollv.scrollTop = Math.round(((this._workspaceDimensions.height*zoomScale)-this._canvas.height)/2);
         	
-        	this._scrollHandlers.scrollv=on(scrollv,"scroll",throttle(scrollDraw,THROTTLE_RATE));
-        	// To ensure the scroll positions are synced with the canvas, we add a debounce lagging
-        	// just behind the throttled redraws, to make sure the draw fires one last time and 
-        	// syncs up the canvas translations with the scroll positions
-        	this._scrollHandlers.scrollvd=on(scrollv,"scroll",debounce(scrollDraw,DEBOUNCE_DELAY));
-        	
-        	if(!this._scrollHandlers.dragToScroll) {
-        		this._initDragToScroll();
+        	if(!this._scrollHandlers.scrollv.th) {
+    			var scrollDraw = function(e) {
+            		if(self._rendererIsValid) {
+            			self._drawCanvas();
+            		}
+            	};
+        		this._scrollHandlers.scrollv.th=on.pausable(scrollv,"scroll",throttle(scrollDraw,REDRAW_THROTTLE_RATE));
+        		// To ensure the scroll positions are synced with the canvas, we add a debounce lagging
+            	// just behind the throttled redraws, to make sure the draw fires one last time and 
+            	// syncs up the canvas translations with the scroll positions
+            	this._scrollHandlers.scrollv.db=on.pausable(scrollv,"scroll",debounce(scrollDraw,REDRAW_DEBOUNCE_DELAY));
+        	} else {
+        		this._scrollHandlers.scrollv.th.resume();
+        		this._scrollHandlers.scrollv.db.resume();
         	}
+
 		},
 
 		// Set up the horizontal virtual scroll element.
 		_initScrollH: function(zoomScale) {
 			
-			var scrollh = dom.byId("scrollh_" + this._cnvContainerNodeId);
 			var self=this;
-			
-			var scrollDraw = function(e) {
-        		if(self._rendererIsValid) {
-        			self._drawCanvas();
-        		}
-        	};
+			var scrollh = dom.byId("scrollh_" + this._cnvContainerNodeId);
 			
         	scrollh.scrollLeft = Math.round(((this._workspaceDimensions.width*zoomScale)-this._canvas.width)/2);
+			
+        	this._scrollHandlers.scrollh.enabled = true;
         	
-        	this._scrollHandlers.scrollh=on(scrollh,"scroll",throttle(scrollDraw,THROTTLE_RATE));
-        	// To ensure the scroll positions are synced with the canvas, we add a debounce lagging
-        	// just behind the throttled redraws, to make sure the draw fires one last time and 
-        	// syncs up the canvas translations with the scroll positions
-        	this._scrollHandlers.scrollhd=on(scrollh,"scroll",debounce(scrollDraw,DEBOUNCE_DELAY));
-        	
-        	if(!this._scrollHandlers.dragToScroll) {
-        		this._initDragToScroll();
+        	if(!this._scrollHandlers.scrollh.th) {
+    			var scrollDraw = function(e) {
+            		if(self._rendererIsValid) {
+            			self._drawCanvas();
+            		}
+            	};
+            	
+            	this._scrollHandlers.scrollh.th=on.pausable(scrollh,"scroll",throttle(scrollDraw,REDRAW_THROTTLE_RATE));
+            	// To ensure the scroll positions are synced with the canvas, we add a debounce lagging
+            	// just behind the throttled redraws, to make sure the draw fires one last time and 
+            	// syncs up the canvas translations with the scroll positions
+            	this._scrollHandlers.scrollh.db=on.pausable(scrollh,"scroll",debounce(scrollDraw,REDRAW_DEBOUNCE_DELAY));
+        	} else {
+        		this._scrollHandlers.scrollh.th.resume();
+        		this._scrollHandlers.scrollh.db.resume();
         	}
 		},
 
 		// Disable the horizontal scroll element's event
 		_disableScrollH: function() {
-			if(this._scrollHandlers.scrollh) {
-				this._scrollHandlers.scrollh.remove();
-				this._scrollHandlers.scrollhd.remove();
-				this._scrollHandlers.scrollh = null;
-				this._scrollHandlers.scrollhd = null;
-			}
-			if(!this._scrollHandlers.scrollv) {
-				this._disableDragToScroll();
+			if(this._scrollHandlers.scrollh.enabled) {
+				this._scrollHandlers.scrollh.enabled = false;
+				this._scrollHandlers.scrollh.th.pause();
+				this._scrollHandlers.scrollh.db.pause();
 			}
 		},
 		
 		// Disable the vertical scroll element's event
 		_disableScrollV: function() {
-			if(this._scrollHandlers.scrollv) {
-				this._scrollHandlers.scrollv.remove();
-				this._scrollHandlers.scrollvd.remove();
-				this._scrollHandlers.scrollv = null;
-				this._scrollHandlers.scrollvd = null;
-			}
-			if(!this._scrollHandlers.scrollh) {
-				this._disableDragToScroll();
+			if(this._scrollHandlers.scrollv.enabled) {
+				this._scrollHandlers.scrollv.enabled = false;
+				this._scrollHandlers.scrollv.th.pause();
+				this._scrollHandlers.scrollv.db.pause();
 			}			
-		},
-		
-		// We don't throttle this mousemove event, because it fires the primary scrolling events, 
-		// and those are already throttling.
-		_initDragToScroll: function() {
-			var self=this;
-			this._scrollHandlers.dragToScroll = {};
-			
-			this._scrollHandlers.dragToScroll.move = on(window,"mousemove",function(e){
-
-				var scrollh = dom.byId("scrollh_" + self._cnvContainerNodeId);
-				var scrollv = dom.byId("scrollv_" + self._cnvContainerNodeId);				
-				if(e.ctrlKey && !e.shiftKey && !e.altKey && self._scrollHandlers.dragToScroll.mouseIsDown) {
-					if(self._scrollHandlers.scrollh) {
-						scrollh.scrollLeft += (self._scrollHandlers.dragToScroll.mouseStatus.currX-e.clientX);
-					}
-					if(self._scrollHandlers.scrollv) {
-						scrollv.scrollTop += (self._scrollHandlers.dragToScroll.mouseStatus.currY-e.clientY);
-					}
-					self._scrollHandlers.dragToScroll.mouseStatus.currX = e.clientX;
-					self._scrollHandlers.dragToScroll.mouseStatus.currY = e.clientY;
-				}
-			});
-			
-			// Only begin dragging on a *left* mousedown
-			this._scrollHandlers.dragToScroll.down = on(dom.byId(this._cnvContainerNodeId),"mousedown",function(e){
-				if(e.ctrlKey && !e.shiftKey && !e.altKey && mouse.isLeft(e)) {
-					self._scrollHandlers.dragToScroll.mouseStatus = {
-						currX: e.clientX,
-						currY: e.clientY
-					};
-					self._scrollHandlers.dragToScroll.mouseIsDown = true;
-					e.preventDefault();
-					e.stopPropagation();
-				}
-			});
-			this._scrollHandlers.dragToScroll.up = on(document.body,"mouseup",function(e){
-				if(self._scrollHandlers && self._scrollHandlers.dragToScroll) {
-					self._scrollHandlers.dragToScroll.mouseIsDown = false;
-				}
-			});
-			this._scrollHandlers.dragToScroll.leave = on(document.body,"mouseleave",function(e){
-				if(self._scrollHandlers && self._scrollHandlers.dragToScroll) {
-					self._scrollHandlers.dragToScroll.mouseIsDown = false;
-				}
-			});
-			this._scrollHandlers.dragToScroll.click = on(window,"click",function(e){
-				if(self._scrollHandlers && self._scrollHandlers.dragToScroll) {
-					self._scrollHandlers.dragToScroll.mouseIsDown = false;
-				}
-			});
-		},
-		
-		// Disable control-click scroll dragging
-		_disableDragToScroll: function() {
-			if(this._scrollHandlers.dragToScroll) {
-				this._scrollHandlers.dragToScroll.up.remove();
-				this._scrollHandlers.dragToScroll.leave.remove();
-				this._scrollHandlers.dragToScroll.click.remove();
-				this._scrollHandlers.dragToScroll.move.remove();
-				this._scrollHandlers.dragToScroll.down.remove();
-				delete this._scrollHandlers.dragToScroll;
-			}
 		},
 		
 		// Disable both scroll elements' indidvidual events, and the combined dragToScroll event
 		_disableScrolling: function() {
 			this._disableScrollH();
 			this._disableScrollV();
-			this._disableDragToScroll();
 		},
 		
 		///////////////////////////////
@@ -869,11 +1233,11 @@ define([
 			var grnWrapper = dom.byId(this._cnvWrapperNodeId);
 			this._offCanvas = domConstruct.create(
 				"canvas",{
-					id: this._cnvContainerNodeId + "Canvas2" + "_" + utils.makeId(),
-					width: grnWrapper.clientWidth-SCROLL_BAR_SIZE,
-					height: grnWrapper.clientHeight-SCROLL_BAR_SIZE
+					id: this._cnvContainerNodeId + "Canvas2_" + utils.makeId(),
+					width: (grnWrapper.clientWidth || this._lastWrapperSize.w)-SCROLL_BAR_SPACE,
+					height: (grnWrapper.clientHeight || this._lastWrapperSize.h)-SCROLL_BAR_SPACE
 				}
-			);			
+			);
 		},
 		
 		///////////////////////////////
@@ -882,20 +1246,23 @@ define([
 		//
 		// Switch the private canvas references
 		//
-		_toggleCanvas: function(){			
-			if(!this._offCanvas) {
-				this._makeOffCanvas();
-			} else if(this._offCanvas.parentNode) {
-				// This means a swap has already been performed, and is waiting on a toggle.
-				// We really shouldn't be here, so we'll warn and quit.
-				console.warn("[WARNING] Canvases are already swapped!");
-				return;
+		_toggleCanvas: function(){
+			if(this._bufferedCanvases) {
+				if(!this._offCanvas) {
+					this._makeOffCanvas();
+				} else if(this._offCanvas.parentNode) {
+					// This means a swap has already been performed, and is waiting on a toggle.
+					// We really shouldn't be here, so we'll warn and quit.
+					console.warn("[WARNING] Canvases are already swapped!");
+					return;
+				}
+				
+				var tmp = this._canvas;
+				this._canvas = this._offCanvas;
+				this._offCanvas = tmp;
 			}
 			
-			var tmp = this._canvas;
-			this._canvas = this._offCanvas;
-			this._offCanvas = tmp;
-			
+			// Always do a context update
 			this._canvasRenderer.setElementAndContext(this._canvas);
 		},
 		
@@ -906,27 +1273,37 @@ define([
 		// Swap the canvas DOM nodes
 		//
 		_swapCanvas: function() {
-			domConstruct.place(this._canvas,this._offCanvas,"replace");	
+			this._bufferedCanvases && domConstruct.place(this._canvas,this._offCanvas,"replace");	
 		},
 		
 		///////////////////////////////
 		// _drawCanvas
 		//////////////////////////////
 		//
-		// Primary draw method. Toggles the canvases, sets the zoom values
+		// Primary draw method. Toggles the canvases, sets the zoom levels
 		// and adjusts the scroll settings, draws the model, and swaps
 		// the canvases
 		//		
-		_drawCanvas: function(zoomToVal) {
+		_drawCanvas: function(zoomToLvl) {
     		this._toggleCanvas();
-    		this._zoom(this._currentZoomLevel,zoomToVal);
-    		if(zoomToVal !== undefined && zoomToVal !== null) {
-    			this._currentZoomLevel = zoomToVal;
+
+    		// only store the zoomToLvl if it has a value set
+    		if(zoomToLvl !== undefined && zoomToLvl !== null) {
+    			this._currentZoomLevel = zoomToLvl;
 			}
-			this._drawModel();   
+    		
+    		this._zoom(this._currentZoomLevel,zoomToLvl);
+    		
+
+    		if(this.currentModel_.isGroupNode()) {
+    			this._drawGroupNode();
+    		} else {
+    			this._drawModel();	
+    		}
+			   
 			this._swapCanvas();
+			this._showLoading(true);
 		},
-		
 		
 		/////////////////////////////////////
 		// _buildCanvas
@@ -937,6 +1314,12 @@ define([
 		_buildCanvas: function() {
 			
 			var grnWrapper = dom.byId(this._cnvWrapperNodeId);
+			
+			this._lastWrapperSize = {
+				w: grnWrapper.clientWidth,
+				h: grnWrapper.clientHeight
+			};
+			
 			var self=this;
 			
 			var cnvRow1 = domConstruct.create("div",{id: "cnvRow1_" + this._cnvContainerNodeId, width: (grnWrapper.clientWidth-2)},grnWrapper,"last");
@@ -946,40 +1329,33 @@ define([
 				id: this._cnvContainerNodeId,
 				"class":"CanvasContainer"
 			},cnvRow1,"first");
-						
-			// The ModelController for this Canvas will not be aware of the Canvas container ID inherently, so once the DIV is made
-			// we need to inform it
-			require([this._networkModelController],function(networkModelController){
-				networkModelController.set("cnvContainerDomNodeId_",self._cnvContainerNodeId);
-			});
-			
+
 			this._canvas = domConstruct.create(
 				"canvas",{
-					id: this._cnvContainerNodeId + "Canvas1" + "_" + utils.makeId(),
-					width: grnWrapper.clientWidth-SCROLL_BAR_SIZE,
-					height: grnWrapper.clientHeight-SCROLL_BAR_SIZE
+					id: this._cnvContainerNodeId + "Canvas1_" + utils.makeId(),
+					width: grnWrapper.clientWidth-SCROLL_BAR_SPACE,
+					height: grnWrapper.clientHeight-SCROLL_BAR_SPACE
 				}, 
 				grn
 			);
 			
-			// Fun with OSX scrollbars
+			// OSX scrollbars
 			//			
-			// OSX Lion can be set to autohide scrollbars between scroll uses at the system level.
-			// Some browsers ignore this, but Webkit browsers do not. If a user is on a system
-			// without a mousewheel, they may lose the ability to scroll the canvas, because it is a 
-			// virtually scrolled element, and thus not detected as scrollable by the system. (The 
-			// hidden DIVs used to activate the scrollbars are considered scrollable in these 
-			// instances, and as they are 1px in size--technically rendered if not visible--the browser
-			// expects the user to be able to find them and hover on them to reveal the scrollbars.
+			// OSX Lion+ can be set to autohide scrollbars between scroll uses at the system level.
+			// Most browsers now abide by this behavior. This presents a problem for our Canvas because 
+			// the elements actually generating the scrollbars (hidden DIVs) are not the element being 
+			// scrolled (the Canvas). We solve this in Webkit browsers by checking for OSX, and then 
+			// applying a special CSS class that disables the normal scrollbars (to prevent them from 
+			// showing up when autohide is disabled, or when they would normally) and then skin our own, 
+			// which we force to always be visible.
+			// 
+			// This is a suboptimal solution, since it overrides what is presumably the user's choice to 
+			// have scroll bars fade and show, but it is the most consistent one given the virtual nature 
+			// our scrolling system.
 			//
-			// We solve this problem by checking for Mac + Webkit, and then applying a special CSS 
-			// class that disables the normal webkit scrollbars (to prevent them from showing up when 
-			// autohide is disabled, or when they would normally) and then skin our own, which we 
-			// force to always be visible. This is a suboptimal solution, since it overrides what is
-			// presumably the user's choice to have scroll bars fade and show, but it is the most 
-			// consistent one given the virtual nature our scrolling system.
+			// There is currently no solution available for Firefox which does not rely on Js-created scrollbars.
 			//
-			var scrollClass = (sniff("mac") && sniff("webkit")) ? "osxScroll" : "";
+			var scrollClass = (has("mac") && has("webkit")) ? "osxScroll" : "";
 			
 			var scrollh = domConstruct.create(
 				"div",{
@@ -1005,12 +1381,11 @@ define([
 			this.own(on(scrollv,"mousedown",function(e){e.preventDefault(); e.stopPropagation();}));
 			this.own(on(scrollh,"mousedown",function(e){e.preventDefault(); e.stopPropagation();}));
 			
-			// We need to create a scrollwheel event for our Canvas container
-			// since we've shut off native scrolling.
-			
+			// We need to create a scrollwheel event for our Canvas container since we've shut off native scrolling.
+			//
 			// Safari needs mousewheel; other browsers can use wheel. In addition, Safari's mousewheel returns a negative 
 			// numer for mousewheel down and a positive value for mousewheel up, while in other browsers the signs are reversed.
-			if(sniff("safari")) {
+			if(has("safari")) {
 				this.own(on(grnWrapper,"mousewheel",function(e){
 					var wheelDelt = e.deltaY || e.wheelDelta || e.wheelDeltaY;
 					if(self._scrollHandlers.scrollv !== null) {
@@ -1026,7 +1401,33 @@ define([
 				}));
 			}
 			
-			var cnvw = domConstruct.create(
+			// We need to create up/down arrow scroll events for our Canvas container since we've shut off native scrolling.
+			this.own(on(grnWrapper,"keydown",function(e){
+				var shift = KB_SCROLL_VALUE;
+				
+				switch(e.keyCode) {
+					case keys.LEFT_ARROW:
+						// Left shift needs to subtract, not add
+						shift *= -1;
+					case keys.RIGHT_ARROW:
+						if(self._scrollHandlers.scrollh) {
+							scrollh.scrollLeft += shift;
+						}
+						break;
+					case keys.UP_ARROW:
+						// Up shift needs to subtract, not add
+						shift *= -1;
+					case keys.DOWN_ARROW:
+						if(self._scrollHandlers.scrollv) {
+							scrollv.scrollTop += shift;
+						}
+						break;
+					default:
+						break;
+				}
+			}));
+			
+			domConstruct.create(
 				"div",{
 					id: "cnvw_" + this._cnvContainerNodeId,
 					style: "width: " + this._canvas.width + "px; "
@@ -1034,7 +1435,7 @@ define([
 				},scrollh
 			);
 			
-			var cnvh = domConstruct.create(
+			domConstruct.create(
 				"div",{
 					id: "cnvh_" + this._cnvContainerNodeId,
 					style: "height: " + this._canvas.height + "px; "
@@ -1051,6 +1452,7 @@ define([
 		// deselect all nodes, into the renderer. Due to the asynchronous load of models,
 		// this method is asynchronous and returns a Deferred.promise for registering
 		// callbacks
+		//
 	    _selectNodes: function(nodesToSelect) {
 	    	var self=this;
 	    	var asyncSelector = new Deferred();
@@ -1061,11 +1463,11 @@ define([
 			    	if(!nodesToSelect) {
 			    		nodesToSelect = {};
 			    	}
-		    		self._canvasRenderer.setSelectedNodeIDMap(self.currentModel_.get("modelId_"),nodesToSelect);
+		    		self._canvasRenderer.setSelectedNodeIDMap(self._currentModelId(),nodesToSelect);
 		    		asyncSelector.resolve();	
 	    		}
 	    	},function(err){
-	    		console.debug("Loader rejected in node selection");
+	    		console.error("[ERROR] In node selection: "+err);
 	    	});
 	    	return asyncSelector.promise;
 	    },	    
@@ -1086,7 +1488,13 @@ define([
     			ctx.fillText("NO",0,0);
 	    	}
 	    },
-	    
+
+	    /////////////////////////////////////////
+	    // _actionClickPending
+	    ////////////////////////////////////////
+	    //
+	    // Set the _actionClickPending state
+	    //
 	    _actionClickPending: function(isPending) {
 	    	this.actionClickPending_ = isPending;
 	    },
@@ -1114,6 +1522,8 @@ define([
 	    		this.actionClickPending_ = true;
 	    		if(this.placeHolder_ === null) {
 	    			this.placeHolder_ = domConstruct.create("canvas",{id: "placeHolder"},document.body,"first");
+	    			this.placeHolder_.width = 100;
+	    			this.placeHolder_.height = 50;
 	    		}
     			var ctx = this.placeHolder_.getContext("2d");
     			ctx.clearRect(0,0,this.placeHolder_.width,this.placeHolder_.height);
@@ -1155,9 +1565,275 @@ define([
 	    /////////////////////////////
 	    //
 	    // Toggle the value of _drawEventsGo
+	    //
 	    _toggleWatchEvents: function() {
 	    	this._drawEventsGo = !this._drawEventsGo;
 	    },
+	    
+	    //////////////////////////
+	    // _buildMouseHandlers
+	    /////////////////////////
+	    //
+	    // Puts together the primary event handling of mouseup, mousedown, and mousemove.
+	    // This includes left-drag events (control-left scrolling and left-only selection box), left 
+	    // and shift-left entity selection and left note-sticky, tooltips, note and groupnode hovers, 
+	    // and right or alt-left context menuing
+	    //
+	    _buildMouseHandlers: function() {
+	    	var self=this;
+	    	var grn = dom.byId(this._cnvContainerNodeId);
+	    	
+	    	// If a selexBox is in use, it's possible for the mouse events to
+	    	// fire from that and not from the window or grn. We define a special function
+	    	// so we can bind mouseup on the selection box to the same event as would be
+	    	// fired if it occurred on the window/grn.
+	    	self._mouseHandlers.LEFT.DRAG.NONE.selBox.mouseUpCallback = function(e) {
+	    		self._mouseHandlers.LEFT.DRAG.NONE.pauseAll();
+	    		self._mouseStatus.mouseUp(e);
+	    		var diffX = Math.abs(self._mouseStatus.upX-self._mouseStatus.downX);
+	    		var diffY = Math.abs(self._mouseStatus.upY-self._mouseStatus.downY);
+	    		if(self._mouseHandlers.LEFT.DRAG.NONE.callback && (diffX > MIN_MOUSE_MOVE || diffY > MIN_MOUSE_MOVE)) {
+	    			var mouseStatus = self._mouseStatus;
+	    			var translatedStart = self._translateHit({x: mouseStatus.downX, y: mouseStatus.downY});
+	    			var translatedStop = self._translateHit({x: mouseStatus.upX, y: mouseStatus.upY});
+	    			e.hits = self.intersectByBoundingBox({
+	    				min_x: Math.min(translatedStart.x,translatedStop.x),
+	    				max_x: Math.max(translatedStart.x,translatedStop.x),
+	    				min_y: Math.min(translatedStart.y,translatedStop.y),
+	    				max_y: Math.max(translatedStart.y,translatedStop.y)	
+	    			});
+	    			e.selectedNodes = self.getSelectedNodes();
+	    			self._mouseHandlers.LEFT.DRAG.NONE.callback(e);
+	    		}
+	    		self._mouseStatus.clear();
+	    		self._selexBox.cleanUp();	
+	    	};
+	    	
+	    	self._mouseHandlers.LEFT.DRAG.CTRL = function(e) {			
+				if(self._scrollHandlers.scrollh.enabled) {
+					dom.byId("scrollh_" + self._cnvContainerNodeId).scrollLeft += (self._mouseStatus.currX-e.clientX);
+				}
+				if(self._scrollHandlers.scrollv.enabled) {
+					dom.byId("scrollv_" + self._cnvContainerNodeId).scrollTop += (self._mouseStatus.currY-e.clientY);
+				}
+	    	};
+	    	
+	    	// Primary Mousedown Handle
+	    	this.own(
+            	on(grn,"mousedown",function(e){
+            		self._mouseStatus.mouseDown(e);
+            		
+            		self._tooltip && self._tooltip.hide();
+ 
+            		if(self.currentModel_ && self.currentModel_.drawingObject_) {
+            			var clickedOn = null;
+            			if(self.currentModel_.isGroupNode()) {
+            				var ID = self.getGroupNodeClick(self._translateHit({x: e.clientX, y: e.clientY}));
+	        				if(ID) {
+	        					clickedOn = {};
+	        					clickedOn.modelId = ((ID.node_id !== null && ID.node_id !== undefined) ? ID.node_id : ID.proxy_id);
+	        					clickedOn.state = ID.proxy_time;
+	        					clickedOn.region = ID.region_id;
+	        				}            				
+            			} else {
+                			var hits = self.intersectByPoint(self._translateHit({x: e.clientX, y: e.clientY}));
+                			if(hits) {
+                				clickedOn = {};
+                				clickedOn.hits = hits;
+                				clickedOn.selNodes = self.getSelectedNodes();
+                			}
+                		}
+            			
+                		// clickedOn && self._prepForDrag(clickedOn); 
+                		
+                		if(!self.currentModel_.isGroupNode() && (!e.hits || !HitPriority.movableHit(e.hits)) && self._keysPressed(e) === "NONE") {
+                			self._mouseHandlers.LEFT.DRAG.NONE.resumeAll();
+                		}
+            		}
+            	})
+            );
+	    	
+	    	// Primary Mouseup Handle
+	    	this.own(on(grn,"mouseup",function(e){
+	    		self._mouseStatus.mouseUp(e);
+	    		self._mouseHandlers.LEFT.DRAG.NONE.pauseAll();
+	    		
+				if(!self.actionClickPending_ && self.currentModel_ && self.currentModel_.drawingObject_) {
+					if(self._selexBox.isShown) {
+						self._mouseHandlers.LEFT.DRAG.NONE.selBox.mouseUpCallback(e);
+					} else {
+						if(self.currentModel_.isGroupNode()) {
+	        				var ID = self.getGroupNodeClick(self._translateHit({x: e.clientX, y: e.clientY}));
+	        				if(!ID) {
+	        					e.modelId = null;
+	        					e.state = null;
+	        					e.region = null;
+	        				} else {
+	        					e.modelId = ((ID.node_id !== null && ID.node_id !== undefined) ? ID.node_id : ID.proxy_id);
+	        					e.state = ID.proxy_time;
+	        					e.region = ID.region_id;
+	        				}
+	        			} else {
+	        				e.hits = self.intersectByPoint(self._translateHit({x: e.clientX, y: e.clientY}));
+	        				e.selectedNodes = self.getSelectedNodes();
+	        			}
+						e.nodeType = self.currentModel_.nodeType_;
+						if(mouse.isLeft(e)) {
+							// Require no minimum movement over the max to ensure this wasn't an accidental mouseup during a drag
+							 !self._mouseStatus.isMinMove(e) && self._mouseHandlers 
+							 	&& self._mouseHandlers.LEFT[self._keysPressed(e)] 
+							 && self._mouseHandlers.LEFT[self._keysPressed(e)](e);
+						} else {
+							self._mouseHandlers && self._mouseHandlers.RIGHT[self._keysPressed(e)] 
+								&& self._mouseHandlers.RIGHT[self._keysPressed(e)](e);
+						}
+					}
+				}
+				self._mouseStatus.clear();
+	    	}));
+	    		   
+	    	// We'll need to perform this action in several places, so we make it into a function
+	    	// to be called from those event handlers.
+	    	var resizeSelBox = function(e) {
+	    		if(self._mouseStatus.isDown && self._mouseStatus.which === LEFT_MOUSE && !self.currentModel_.isGroupNode()) {
+					self._selexBox.show({
+		    			x: Math.min(e.clientX,self._mouseStatus.downX),
+		    			y: Math.min(e.clientY,self._mouseStatus.downY),
+			    		w: Math.abs(e.clientX-self._mouseStatus.downX),
+			    		h: Math.abs(e.clientY-self._mouseStatus.downY)
+		    		});
+	    		}
+	    		e.preventDefault();
+	    	};
+	    	
+	    	// We need the box to keep drawing even if they mouse off the canvas, so we have
+	    	// to assign the mousemove to the window as well as grn
+	    	this._mouseHandlers.LEFT.DRAG.NONE.windowMouseMove = on.pausable(window,"mousemove",function(e){
+	    		resizeSelBox(e);
+	    	});
+	    	
+	    	// Because it's possible for events to trigger from the selection box DIV itself, we 
+	    	// assign handlers to it, but we pause that handler any time the selectionBox is not
+	    	// being displayed (done in mouseup)
+	    	this._mouseHandlers.LEFT.DRAG.NONE.selBox.moveMove = on.pausable(self._selexBox._domNode,"mousemove",function(e){
+	    		resizeSelBox(e);
+	    	});
+	    	this._mouseHandlers.LEFT.DRAG.NONE.selBox.mouseUp = on.pausable(self._selexBox._domNode,"mouseup",function(e){
+	    		self._mouseHandlers.LEFT.DRAG.NONE.selBox.mouseUpCallback(e);
+	    	});
+	    	
+	    	this.own(this._mouseHandlers.LEFT.DRAG.NONE.windowMouseMove);
+	    	self._mouseHandlers.LEFT.DRAG.NONE.windowMouseMove.pause();
+	    	
+	    	var tooltipThread = null;
+	    	
+		    var tooltipStop = function(e) {
+		    	var aroundThis = {x: e.clientX, y: e.clientY};
+		    	if(!self.actionClickPending_ && self.currentModel_ && self.currentModel_.drawingObject_ && self._rendererIsValid && self._canvasIsReady) {
+		    		var hits = [];
+					if(!self.currentModel_.isGroupNode()) {
+	    				hits = self.intersectByPoint(self._translateHit({x: e.clientX, y: e.clientY},self.cnvContainerDomNodeId_));
+			    	}
+			    	var tooltipableHit = (hits && hits.length > 0) ? HitPriority.getTopPriorityHit(hits,{note: true},self.currentModel_.get("toggledRegions_")) : null;
+			    	var showThis = tooltipableHit ? self._tooltip.fetch(tooltipableHit) : null;
+			    	if(showThis && !BTContextMenus.contextIsOpen("canvas") && (!self._tooltip.toShow || !self._tooltip.isCurrentlyShown(showThis))){
+			    		self._tooltip.show(showThis,aroundThis);					    	
+		    		}
+		    	}
+		    };
+		    
+	    	// Primary Mousemove Handle
+		    // This is a pausable handle so we can stop firing this handler in certain circumstances where
+		    // it might prove extraneous or problematic
+	    	var mainMouseMove = on.pausable(grn,"mousemove",function(e){
+	    		if(self._mouseStatus.isDown) {
+	    			// These are 'drag' handlers
+	    			if(self._mouseStatus.which === "LEFT") {
+	    				switch(self._keysPressed(e)) {
+		    				case "CTRL":
+		    					self._mouseHandlers && self._mouseHandlers[self._mouseStatus.which] && 
+		    						self._mouseHandlers[self._mouseStatus.which].DRAG.CTRL && self._mouseHandlers[self._mouseStatus.which].DRAG.CTRL(e);
+		    					e.preventDefault();
+		    					e.stopPropagation();
+		    					break;
+		    				case "NONE":
+		    					resizeSelBox(e);
+		    					break;
+	    					default:
+	    						break;
+		    			}
+	    			}
+	    		} else {
+	    			if(self.currentModel_ && self.currentModel_.drawingObject_ && self._rendererIsValid && self._canvasIsReady) {
+	    				// Hovers act immediately
+	    				var translatedHit = self._translateHit({x: e.clientX, y: e.clientY});
+    					if(self.currentModel_.isGroupNode()) {
+				    		var ID = self.getGroupNodeClick(translatedHit);
+				    		if(ID) {
+				    			self._canvasRenderer._enableGroupNodeRegionHighlightWithPoint(translatedHit,self._currentModelId());	
+				    		} else {
+				    			self._canvasRenderer._disableGroupNodeRegionHighlight(self._currentModelId());
+				    		}
+				    		self._canvasRenderer.renderModelByIDFull(self._currentModelId());
+	    					self._mouseHandlers.HOVER.groupnode && self._mouseHandlers.HOVER.groupnode(e);
+				    	} else {
+				    		var hits = self.intersectByPoint(translatedHit);
+					    	var noteHit = (hits && hits.length > 0) ? HitPriority.getTopNoteHit(hits,null,self.currentModel_.get("toggledRegions_")) : null;
+					    	var showThis = noteHit ? self._mouseHandlers.HOVER.note(noteHit) : null;
+					    	showThis = (showThis && showThis.msg ? showThis : null);
+					    	if(showThis) {
+					    		if(!self._currentNote) {
+					    			self._currentNote = showThis.id;
+							    	GrnModelMsgs.pushMessage(showThis);
+					    		} else if(self._currentNote !== showThis.id){
+					    			GrnModelMsgs.popMessage();
+					    			GrnModelMsgs.pushMessage(showThis);
+					    		}
+					    	} else if(self._currentNote){
+					    		GrnModelMsgs.popMessage();
+					    		self._currentNote = null;
+					    	}
+				    	}
+		    								    
+	    				// Unlike hovering, tooltip has a slight delay built in, so that we're sure we've stopped at a point and
+    					// aren't just passing through it. If there's a tooltip up already, we require a minimum movement from it 
+    					// (rather than from the last recorded mouse position) before we clear timeouts and hide it. This helps 
+    					// prevent tooltip flicker as we mouse along a tooltip-popping object, or a tooltip which is already open
+	    				if(self._tooltip.showAt ? (Math.abs(self._tooltip.showAt.x - e.clientX) > MIN_MOUSE_MOVE || Math.abs(self._tooltip.showAt.y - e.clientY) > MIN_MOUSE_MOVE)
+	    					: true) {
+	    					self._tooltip && self._tooltip.hide();
+	    					tooltipThread && clearTimeout(tooltipThread);
+	    				}
+				    	
+				    	// Set a new one
+					    tooltipThread = setTimeout(tooltipStop, self._tooltip.delay,e);
+		    		}
+	    		}
+	    		
+	    		self._mouseStatus.currX = e.clientX;
+	    		self._mouseStatus.currY = e.clientY;
+	    	});	
+	    	
+	    	// Pause the mousemove event any time we leave the window, and resume it any time we hover
+	    	// back onto the GRN container
+	    	this.own(on(window,"mouseleave",function(e){
+	    		mainMouseMove.pause();
+	    	}));
+	    	
+	    	this.own(on(window,"mouseout",function(e){
+	    		mainMouseMove.pause();
+	    	}));
+	    	
+	    	this.own(on(window,"blur",function(e){
+	    		mainMouseMove.pause();
+	    	}));
+	    	
+	    	this.own(on(grn,"mouseover",function(e){
+	    		mainMouseMove.resume();
+	    	}));
+	    },
+	    
+	    
 	    
 	    //////////////////////////////////
 	    // toggleBoundsDebug
@@ -1176,13 +1852,14 @@ define([
 	    // flushRendererCache
 	    /////////////////////////////////
 	    //
-	    // Empty the contents of the renderer cache
+	    // Empty the supplied list of models from the renderer cache.
+		// TODO: If no model IDs are provided, flush all?
 	    //
 		flushRendererCache: function(modelIds) {
 			this._rendererIsValid = false;
 			var self=this;
 			DojoArray.forEach(modelIds,function(modelId){
-				self._canvasRenderer.removeModel(modelId);
+				self._canvasRenderer.removeModel(modelId+"_"+self._cnvContainerNodeId);
 				if(self.currentModel_ && (self.currentModel_.get("modelId_") === modelId)) {
 					self._canvasIsReady = false;
 					self._canvasReady = new Deferred();
@@ -1202,33 +1879,17 @@ define([
 		},
 	    
 		///////////////////////////////////////
-		// attachLeftClickEvent
+		// attachLeftClickEvents
 		/////////////////////////////////////
 		//
 		// Attach callbacks to the click event when the left key is used. Can provide 
 		// key+leftclick alternate callbacks if desired
 		//
-	    attachLeftClickEvent: function(leftOnlyCallback,shiftLeftCallback,ctrlLeftCallback,altLeftCallback) {
-	    	var self=this;
-	    	
-            this.own(
-    			on(dom.byId(this._cnvContainerNodeId),"click",function(e){
-    				if(!(self.actionClickPending_ === true) && self.currentModel_ && self.currentModel_.drawingObject_) {
-	    				if(mouse.isLeft(e) && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-	    					leftOnlyCallback && leftOnlyCallback(e);
-	    				}
-	    				if(mouse.isLeft(e) && !e.ctrlKey && e.shiftKey && !e.altKey) {
-	    					shiftLeftCallback && shiftLeftCallback(e);
-	    				}
-	    				if(mouse.isLeft(e) && e.ctrlKey && !e.shiftKey && !e.altKey) {
-	    					ctrlLeftCallback && ctrlLeftCallback(e);
-	    				}
-	    				if(mouse.isLeft(e) && !e.ctrlKey && !e.shiftKey && e.altKey) {
-	    					altLeftCallback && altLeftCallback(e);
-	    				}
-    				}
-    			})
-            );
+	    attachLeftClickEvent: function(leftOnlyCallback,shiftCallback,ctrlCallback,altCallback) {
+	    	this._mouseHandlers.LEFT.NONE = leftOnlyCallback;
+	    	this._mouseHandlers.LEFT.SHIFT = shiftCallback;
+	    	this._mouseHandlers.LEFT.ALT = altCallback;
+	    	this._mouseHandlers.LEFT.CTRL = ctrlCallback;
 	    },
 	    
 	    ////////////////////////////////
@@ -1239,107 +1900,24 @@ define([
 	    // in use, and no keyboard keys are being pressed
 	    //
 	    attachRightClickEvent: function(callback) {
-	    	var self=this;
-            this.own(
-            	on(dom.byId(this._cnvContainerNodeId),"mousedown",function(e){
-            		if(((mouse.isRight(e) || (mouse.isLeft(e) && e.ctrlKey)) && !e.shiftKey && !e.altKey)
-        				&& self.currentModel_ && self.currentModel_.drawingObject_) {
-            			callback(e);
-            		}
-            	})
-            );   	
-	    },
+	    	this._mouseHandlers.RIGHT.NONE = callback;
+	    	this._mouseHandlers.LEFT.ALT = callback;
+	    },    
 	    	  
 	    /////////////////////////////////////
-	    // attachNoteEvent
+	    // attachHoverEvents
 	    /////////////////////////////////////
 	    //
-	    // Attach a callback to the 'note' event, i.e. mousing over a note object
-	    // on the canvas
+	    // Attach callbacks to manage any on-hover events
 	    //
-	    attachNoteEvent: function(callback) {
-	    	var self=this;
-	    	require(["views/GrnModelMessages"],function(GrnModelMsgs){
-	    		var MIN_MOVE = 2;
-		    	var cnvContainerNode = dom.byId(self._cnvContainerNodeId);
-		    	var mouseMoveHandler, lastCheck, currentlyShown;
-		    		    	
-		    	self.own(on(cnvContainerNode,"mouseover",function(e){
-		    		mouseMoveHandler = on(cnvContainerNode,"mousemove",function(e){
-		    			
-		    			if(!lastCheck) {
-		    				lastCheck = {x: e.clientX, y: e.clientY};
-		    			}
-		    			
-		    			var diffs = {
-		    				x: Math.abs(lastCheck.x-e.clientX),
-		    				y: Math.abs(lastCheck.y-e.clientY)
-		    			};
-		    					    			
-				    	if((diffs.x > MIN_MOVE || diffs.y > MIN_MOVE) 
-			    			&& (!self.actionClickPending_ && self.currentModel_ && self.currentModel_.drawingObject_)
-			    			&& self._rendererIsValid && self._canvasIsReady) {
-					    	var hits = self.intersectByPoint(self._translateHit({x: e.clientX, y: e.clientY},self.cnvContainerDomNodeId_));
-					    	var noteHit = (hits && hits.length > 0) ? HitPriority.getTopNoteHit(hits,null,self.currentModel_.get("toggledRegions_")) : null;
-					    	var showThis = noteHit ? callback(noteHit) : null;
-					    	showThis = (showThis && showThis.msg ? showThis : null);
-					    	if(showThis) {
-					    		if(!currentlyShown) {
-						    		currentlyShown = showThis.id;
-							    	GrnModelMsgs.pushMessage(showThis);
-					    		} else if(currentlyShown !== showThis.id){
-					    			GrnModelMsgs.popMessage();
-					    			GrnModelMsgs.pushMessage(showThis);
-					    		}
-					    	} else if(currentlyShown){
-					    		GrnModelMsgs.popMessage();
-					    		currentlyShown = null;
-					    	}
-					    	lastCheck = {x: e.clientX, y: e.clientY};
-				    	}
-		    		});	
-		    		
-		    		
-		    		var blur,mouseout,mouseleave;
-		    		
-			    	mouseout = on.once(cnvContainerNode,"mouseout",function(e){
-			    		if(currentlyShown){
-				    		GrnModelMsgs.popMessage();
-				    		currentlyShown = null;
-				    	}
-			    		mouseMoveHandler && mouseMoveHandler.remove();
-			    		blur && blur.remove();
-			    		mouseleave && mouseleave.remove();
-			    	});
-
-			    	blur = on.once(window,"blur",function(e){
-			    		if(currentlyShown){
-				    		GrnModelMsgs.popMessage();
-				    		currentlyShown = null;
-				    	}
-			    		mouseMoveHandler && mouseMoveHandler.remove();
-			    		mouseout && mouseout.remove();
-			    		mouseleave && mouseleave.remove();
-			    	});
-			    	
-			    	// mouseleave is for IE
-			    	mouseleave = on.once(cnvContainerNode,"mouseleave",function(e){
-			    		if(currentlyShown){
-				    		GrnModelMsgs.popMessage();
-				    		currentlyShown = null;
-				    	}
-			    		mouseMoveHandler && mouseMoveHandler.remove();
-			    		blur && blur.remove();
-			    		mouseout && mouseout.remove();
-			    	});
-			    	
-		    	}));	    		
-	    	});	    	
+	    attachHoverEvents: function(noteCallback,groupNodeCallback) {
+	    	this._mouseHandlers.HOVER.note = noteCallback;
+	    	this._mouseHandlers.HOVER.groupnode = groupNodeCallback;
 	    },
     
-	    ///////////////////////////////////////
+	    ///////////////////////
 	    // attachTooltipEvent
-	    ///////////////////////////////////////
+	    ///////////////////////
 	    //
 	    // Attach a callback to the 'tooltip' event, defined as a mouse pausing in a location
 	    // for more than params.delay milliseconds.
@@ -1347,86 +1925,10 @@ define([
 	    // The callback should be the function which will return whatever is to be displayed in the tooltip.
 	    //
 	    attachTooltipEvent: function(callback,params) {
-	    	var MIN_MOVE = 3;
-	    	var padding = params.padding;
-	    	var delay = params.delay;
-	    	var cnvContainerNode = dom.byId(this._cnvContainerNodeId);
-	    	var self=this;
-	    	var mouseMoveHandler, thread, aroundThat, mouseMoved, currentlyShown;
-	    		    	
-	    	this.own(on(cnvContainerNode,"mouseover",function(e){
-	    		
-	    		self.own(on(cnvContainerNode,"mousedown",function(e){
-	    			aroundThat && Tooltip.hide(aroundThat);
-	    		}));
-	    		
-	    		mouseMoveHandler = on(cnvContainerNode,"mousemove",throttle(function(e){
-	    			var diffs = {
-	    				x: aroundThat ? Math.abs(aroundThat.x-e.clientX) : (MIN_MOVE+1),
-	    				y: aroundThat ? Math.abs(aroundThat.y-e.clientY) : (MIN_MOVE+1)
-	    			};
-
-				    var onmousestop = function() {
-				    	var aroundThis = {x: e.clientX, y: e.clientY, w: padding.x, h: padding.y};
-				    	if(!self.actionClickPending_ && self.currentModel_ && self.currentModel_.drawingObject_ && self._rendererIsValid && self._canvasIsReady) {
-					    	var hits = self.intersectByPoint(self._translateHit({x: e.clientX, y: e.clientY},self.cnvContainerDomNodeId_));
-					    	var nonNoteHit = (hits && hits.length > 0) ? HitPriority.getTopPriorityHit(hits,{note: true},self.currentModel_.get("toggledRegions_")) : null;
-					    	var showThis = nonNoteHit ? callback(nonNoteHit) : null;
-					    	if(showThis && !BTContextMenus.contextIsOpen("canvas") && (!currentlyShown || currentlyShown !== showThis)){
-					    		currentlyShown = showThis;
-						    	Tooltip.show(showThis,aroundThis,["after"]);
-						    	// Because the Dijit.Tooltip requires knowing the
-						    	// reference which opened it to close it, we
-						    	// set it here.
-						    	aroundThat = aroundThis;
-					    	}
-				    	}
-				    };
-				    
-				    // We make a reference to this function so we can access it in
-				    // the blur/mouseout/mouseleave events
-				    mouseMoved = function() {
-				    	if(diffs.x > MIN_MOVE || diffs.y > MIN_MOVE) {
-				    		currentlyShown = null;
-				    		Tooltip.hide(aroundThat);
-				    		clearTimeout(thread);
-				    	}
-				    };
-
-				    // Clear the previously set timeout
-			    	mouseMoved();
-			    	
-			    	// Set a new one
-			        thread = setTimeout(onmousestop, delay);
-	    		},TOOLTIP_THROTTLE_RATE));	
-	    		
-	    		
-	    		var blur,mouseout,mouseleave;
-	    		
-		    	mouseout = on.once(cnvContainerNode,"mouseout",function(e){
-		    		mouseMoved && mouseMoved();
-		    		mouseMoveHandler && mouseMoveHandler.remove();
-		    		blur && blur.remove();
-		    		mouseleave && mouseleave.remove();
-		    	});
-
-		    	blur = on.once(window,"blur",function(e){
-		    		mouseMoved && mouseMoved();
-		    		mouseMoveHandler && mouseMoveHandler.remove();
-		    		mouseout && mouseout.remove();
-		    		mouseleave && mouseleave.remove();
-		    	});
-		    	
-		    	// mouseleave is for IE
-		    	mouseleave = on.once(cnvContainerNode,"mouseleave",function(e){
-		    		mouseMoved && mouseMoved();
-		    		mouseMoveHandler && mouseMoveHandler.remove();
-		    		blur && blur.remove();
-		    		mouseout && mouseout.remove();
-		    	});
-	    	}));
-	    },	    
-	    
+	    	this._tooltip.padding = params.padding;
+	    	this._tooltip.delay = params.delay;
+	    	this._tooltip.fetch = callback;
+	    },
 	    
 	    /////////////////////////////////
 	    // attachDragSelectEvent
@@ -1435,126 +1937,42 @@ define([
 	    // Drag-to-Select implemented via CSS editing of a top-level DIV.
 	    // This DIV's basic attributes (border size and color) are defined in main.css#selexBox 
 		//
-	    attachDragSelectEvent: function(callback,fallbackToClick) {
-	    	
-	    	var self=this;
-	    	
-	    	domConstruct.create("div",{id: "selexBox"},document.body);
-	    		    	
-	    	var mouseStatus = {
-	    		x: null,
-	    		y: null,
-	    		endX: null,
-	    		endY: null,
-	    		isDown: false
-	    	};
-	    	
-	    	var selexStatus = {
-	    		built: false	
-	    	};
-	    	
-	    	var cleanUpSelex = function() {
-				mouseStatus.endX = null;
-				mouseStatus.endY = null;
-				selexStatus.built = false;
-	    		var selexBox = dom.byId("selexBox");
-	    		domStyle.set(selexBox,{
-		    		display:"none",
-		    		top:"0px",
-					left:"0px",
-					width:"0px",
-					height:"0px"
-	    		});				
-	    	};
-	    	
-	    	
-	    	var handlers = new Array();
-	    	
-	    	var mouseup = function(e) {
-	    		mouseStatus.isDown = false;
-	    		mouseStatus.endX = e.clientX;
-	    		mouseStatus.endY = e.clientY;
-	    		var diffX = Math.abs(mouseStatus.endX-mouseStatus.x);
-	    		var diffY = Math.abs(mouseStatus.endY-mouseStatus.y);
-	    		DojoArray.forEach(handlers,function(handle) {handle.remove();});
-	    		if(callback && diffX > 3 && diffY > 3) {
-	    			e.mouseStatus = mouseStatus;
-	    			callback(e);
-	    		// In case a click was squelched as a move, try to resurrect it here
-	    		} else if(mouseStatus.hasMoved && fallbackToClick) {
-	    			fallbackToClick(e);
-	    		}
-	    		cleanUpSelex();
-	    		
-	    	};
-	    	
-	    	var mousemove = function(e) {
-	    		var selexBox = dom.byId("selexBox");
-	    		var diffX = Math.abs(e.clientX-mouseStatus.x);
-	    		var diffY = Math.abs(e.clientY-mouseStatus.y);
-	    		var newStyle = {
-	    			left: (e.clientX < mouseStatus.x ? e.clientX : mouseStatus.x)+"px",
-	    			top: (e.clientY < mouseStatus.y ? e.clientY : mouseStatus.y)+"px",
-		    		width: diffX+"px",
-		    		height: diffY+"px"
-	    		}
-	    		
-	    		domStyle.set(selexBox,newStyle);
-	    		e.preventDefault();
-	    	};
-	    	
-	    	var moveFunction = function(e) {
-	    		var diffX = Math.abs(e.clientX-mouseStatus.x);
-	    		var diffY = Math.abs(e.clientY-mouseStatus.y);    				
-	    		if(mouseStatus.isDown === true && (diffX > MIN_MOVEMENT || diffY > MIN_MOVEMENT)) {
-	    			mouseStatus.hasMoved = true;
-		    		var selexBox = dom.byId("selexBox");
-		    		if(!selexStatus.built) {
-		    			// This domStyle call will squelch "click" events! We use a diff to determine 
-		    			// if the mouse really moved
-						domStyle.set(selexBox,{
-							top:e.clientY+"px",
-							left:e.clientX+"px",
-							display:"block"
-						});	
-	    				selexStatus.built = true;
-	    				handlers.push(on(selexBox,"mouseup",mouseup));
-	    				handlers.push(on(selexBox,"mousemove",throttle(mousemove,DRAGSEL_MOVE_THROTTLE_RATE)));
-	    				handlers.push(on(selexBox,"mousemove",debounce(mousemove,DEBOUNCE_DELAY)));	
-		    		}
-		    		mousemove(e);
-	    		}
-	    	};
-	    	
-	    	
-	    	this.own(on(window,"mousemove",throttle(moveFunction,DRAGSEL_MOVE_THROTTLE_RATE)));
-	    	this.own(on(window,"mousemove",debounce(moveFunction,DEBOUNCE_DELAY)));
-			
-	    	this.own(
-    			on(dom.byId(this._cnvContainerNodeId),"mousedown",function(e){
-    				cleanUpSelex();
-    				mouseStatus.x = e.clientX;
-    				mouseStatus.y = e.clientY;
-    				if(mouse.isLeft(e) && !e.ctrlKey && !e.altKey) {
-    					handlers.push(on(window,"mouseup",mouseup));
-    					mouseStatus.isDown = true;
-        				mouseStatus.hasMoved = false;
-        				e.preventDefault();
-            		}
-    			})
-			);
+	    attachDragSelectEvent: function(callback) {
+	    	this._mouseHandlers.LEFT.DRAG.NONE.callback = callback;
 	    },
 	
+	    //////////////////////
+	    // updateZoomStates
+	    /////////////////////
+	    //
+	    // 
+	    updateZoomStates: function() {
+	    	this._zoomController.updateStates(this._currentZoomLevel,this.zoomStates_);
+	    },
+	    
+	    ///////////////////////
+	    // disableZooming
+	    ///////////////////////
+	    //
+	    //
+	    disableZooming: function() {
+	    	this._zoomController.disableZooming(this.zoomStates_);
+	    },
 	    
 	    // pass through method to the Renderer point selection method
 	    intersectByPoint: function(thisHit) {
-	    	return this._canvasRenderer._doPointSelection(thisHit,this.currentModel_.get("modelId_"));
+	    	return this._canvasRenderer._doPointSelection(thisHit,this._currentModelId());
 	    },
 
 	    // pass through method to the Renderer rectangular selection method
 	    intersectByBoundingBox: function(thisBox) {
-	    	return this._canvasRenderer._doRectangleSelection(thisBox,this.currentModel_.get("modelId_"));
-	    },	    
+	    	return this._canvasRenderer._doRectangleSelection(thisBox,this._currentModelId());
+	    },
+	    
+	    // pass through method to the Renderer Group Node click method
+	    getGroupNodeClick: function(thisHit) {
+	    	return this._canvasRenderer._getGroupNodeClickId(thisHit,this._currentModelId());
+	    },
 	    
 	    
 	    ////////////////////////////
@@ -1574,9 +1992,11 @@ define([
 	    			self._drawCanvas();
 		    		asyncSelector.resolve();
 	    		},function(err){
-	    			console.warn("Canvas did not select.");
+	    			console.warn("[WARNING] Did not select nodes in BTCanvas.selectNodes!");
 	    			asyncSelector.resolve();
 	    		});
+	    	},function(err){
+	    		console.error(ErrMsgs.CanvasReadyErr + " node selection!");
 	    	});
 	    	return asyncSelector.promise;
 	    },
@@ -1596,8 +2016,13 @@ define([
 	    	var asyncSelector = new Deferred();
 	    	this._canvasReady.promise.then(function(){
 	    		self._asyncModelLoader.promise.then(function(){
-	    			asyncSelector.resolve(self._canvasRenderer.getAllSelectedMap(self.currentModel_.get("modelId_")));
+	    			asyncSelector.resolve(self._canvasRenderer.getAllSelectedMap(self._currentModelId()));
+	    		},function(err){
+	    			console.error("[ERROR] Loader rejected in BTCanvas.getAllNodes!");
+	    			asyncSelector.reject(err);
 	    		});
+	    	},function(err){
+	    		console.error(ErrMsgs.CanvasReadyErr + " retrieval of all nodes!");
 	    	});
 	    	return asyncSelector.promise;
 	    },
@@ -1610,7 +2035,7 @@ define([
 	    // belong to is kept in the renderer.
 	    //
 	    getSharedIds: function(linkId) {
-	    	return this._canvasRenderer.getLinkageBySharedID(this.currentModel_.get("modelId_"),linkId);
+	    	return this._canvasRenderer.getLinkageBySharedID(this._currentModelId(),linkId);
 	    },
 	    
 	    //////////////////////////////////
@@ -1620,32 +2045,45 @@ define([
 	    // Return the list of nodes the renderer has marked as selected
 	    //
 		getSelectedNodes: function() {
-			return this._canvasRenderer.getSelectedNodeIDMap(this.currentModel_.get("modelId_"));
+			return this._canvasRenderer.getSelectedNodeIDMap(this._currentModelId());
 		},
 		
-	///////////////////////////////////////////////////////
-	// Zoom Drawing Actions
-	///////////////////////////////////////////////////////
+
+	// ------------------------------- Zoom Drawing Actions ------------------------------- //
+
 		
-		// overall zoom method; everything uses this method to actually perform its zoom
-		zoomTo_: function(zoomVal) {
-			this._drawCanvas(zoomVal);
+		///////////////////
+		// zoomTo_
+		//////////////////
+		//
+		// All zoom events delegate to this method
+		//
+		// zoomLvl (optional) - the index in the ZoomController array which corresponds to a 
+		// 		zoom value
+		// 
+		zoomTo_: function(zoomLvl) {
+			this._drawCanvas(zoomLvl);
 		},
 		
-		// basic zooming
+		////////// Basic Zooming //////////
 		zoomIn: function() {
-			this.zoomTo_(ZoomController.zoomIn(this._currentZoomLevel,this.zoomStates_));
+			this.zoomTo_(this._zoomController.zoomIn(this._currentZoomLevel,this.zoomStates_));
 		},
 		zoomOut: function() {
-			this.zoomTo_(ZoomController.zoomOut(this._currentZoomLevel,this.zoomStates_));
+			this.zoomTo_(this._zoomController.zoomOut(this._currentZoomLevel,this.zoomStates_));
 		},
 		
-		// module-based zooming
+		////////// Module-centric Zooming //////////
 		zoomToModules: function(modules) {
-			var modBounds = canvasRenderer.getOverlay(this.currentModel_.get("modelId_"),this.currentModel_.get("overlay_").id).getOuterBoundsForModules(modules);
-			this.zoomTo_(ZoomController.getOptimalZoom(
+			var grnWrapper = dom.byId(this._cnvWrapperNodeId);
+			
+			var modBounds = canvasRenderer.getOverlay(
+				this._currentModelId(),
+				this.currentModel_.get("overlay_").id
+			).getOuterBoundsForModules(modules);
+			this.zoomTo_(this._zoomController.getOptimalZoom(
     			{w: (Math.abs(modBounds.max_x - modBounds.min_x)), h: (Math.abs(modBounds.max_y - modBounds.min_y))},
-    			{w: dom.byId(this._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(this._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+    			{w: (grnWrapper.clientWidth || this._lastWrapperSize.w).clientWidth-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || this._lastWrapperSize.h)-SCROLL_BAR_SIZE},
     			"OPTIMAL_SELECTED",
     			this.zoomStates_
 			));
@@ -1668,17 +2106,20 @@ define([
 			});			
 		},
 		
-		// node- and selection-specific zooming
+		////////// Node- and Selection-specific Zooming //////////
 		zoomToNode: function(nodeId) {
 			var self=this;
+			
 			this._asyncModelLoader.promise.then(function(){
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+								
 				var nodeBounds = canvasRenderer.getBoundsForIntersection(
-					self.currentModel_.get("modelId_"),
-					canvasRenderer.getIntersectionsByIDs(self.currentModel_.get("modelId_"),[nodeId])[nodeId]
+					self._currentModelId(),
+					canvasRenderer.getIntersectionsByIDs(self._currentModelId(),[nodeId])[nodeId]
 				);
-				self.zoomTo_(ZoomController.getOptimalZoom(
+				self.zoomTo_(self._zoomController.getOptimalZoom(
 	    			{w: (Math.abs(nodeBounds.max_x - nodeBounds.min_x)), h: (Math.abs(nodeBounds.max_y - nodeBounds.min_y))},
-	    			{w: dom.byId(self._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+	    			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
 	    			"OPTIMAL_SELECTED",
 	    			self.zoomStates_
 				));
@@ -1692,10 +2133,12 @@ define([
 		zoomToSelNode: function(nodeId) {
 			var self=this;
 			this._asyncModelLoader.promise.then(function(){
-				var nodeBounds = canvasRenderer.getBoundsForIntersection(self.currentModel_.get("modelId_"),self.getSelectedNodes()[nodeId]);
-				self.zoomTo_(ZoomController.getOptimalZoom(
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+				
+				var nodeBounds = canvasRenderer.getBoundsForIntersection(self._currentModelId(),self.getSelectedNodes()[nodeId]);
+				self.zoomTo_(self._zoomController.getOptimalZoom(
 	    			{w: (Math.abs(nodeBounds.max_x - nodeBounds.min_x)), h: (Math.abs(nodeBounds.max_y - nodeBounds.min_y))},
-	    			{w: dom.byId(self._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+	    			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
 	    			"OPTIMAL_SELECTED",
 	    			self.zoomStates_
 				));
@@ -1706,13 +2149,14 @@ define([
 				});	
 			});
 		},		
-		zoomToSelected: function() {
+		zoomToSelected: function(focusCanvas) {
 			var self=this;
 			this._asyncModelLoader.promise.then(function(){
-				var selectedBoundingBox = canvasRenderer.getBoundsForSelectedNodes(self.currentModel_.get("modelId_"));
-				self.zoomTo_(ZoomController.getOptimalZoom(
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+				var selectedBoundingBox = canvasRenderer.getBoundsForSelectedNodes(self._currentModelId());
+				self.zoomTo_(self._zoomController.getOptimalZoom(
 	    			{w: (Math.abs(selectedBoundingBox.max_x - selectedBoundingBox.min_x)), h: (Math.abs(selectedBoundingBox.max_y - selectedBoundingBox.min_y))},
-	    			{w: dom.byId(self._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+	    			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
 	    			"OPTIMAL_SELECTED",
 	    			self.zoomStates_
 				));
@@ -1720,17 +2164,34 @@ define([
 				self._scrollToWorldPoint({
 					x: selectedBoundingBox.min_x + (Math.abs(selectedBoundingBox.max_x - selectedBoundingBox.min_x))/2, 
 					y: selectedBoundingBox.min_y + (Math.abs(selectedBoundingBox.max_y - selectedBoundingBox.min_y))/2
-				});				
+				});	
+				
+				if(focusCanvas) {
+					require(["dijit/focus"],function(focus){
+						focus.focus(grnWrapper);
+					});
+				}
 			});
 		},
 		
-		// model zooming
+		////////// Model/Node zooming //////////
+		zoomToWholeGroupNode: function() {
+			var self=this;
+
+			this._canvasReady.promise.then(function(){
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+				self.zoomTo_(self._zoomController.getClosestZoomValue(GROUP_NODE_ZOOM));
+			},function(err){
+				console.error(ErrMsgs.CanvasReadyErr + " zoom to group node!");
+			});
+		},
 		zoomToWholeModel: function() {
 			var self=this;
 			this._canvasReady.promise.then(function(){
-				self.zoomTo_(ZoomController.getOptimalZoom(
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+				self.zoomTo_(self._zoomController.getOptimalZoom(
 	    			{w: self.currentModel_.drawingObject_.model_w, h: self.currentModel_.drawingObject_.model_h},
-	    			{w: dom.byId(self._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+	    			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
 	    			"OPTIMAL_WHOLE_MODEL",
 	    			self.zoomStates_
 				));
@@ -1739,14 +2200,17 @@ define([
 					x: self.currentModel_.drawingObject_.model_x+(self.currentModel_.drawingObject_.model_w/2), 
 					y: self.currentModel_.drawingObject_.model_y+(self.currentModel_.drawingObject_.model_h/2)
 				});
+			},function(err){
+				console.error(ErrMsgs.CanvasReadyErr + " zoom to whole model!");
 			});
 		},
 		zoomToAllModels: function(bounds) {
 			var self=this;
 			this._canvasReady.promise.then(function(){
-				self.zoomTo_(ZoomController.getOptimalZoom(
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+				self.zoomTo_(self._zoomController.getOptimalZoom(
 	    			{w: Math.abs(bounds.max_x-bounds.min_x), h: Math.abs(bounds.max_y-bounds.min_y)},
-	    			{w: dom.byId(self._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+	    			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
 	    			"OPTIMAL_WHOLE_MODEL",
 	    			self.zoomStates_
 				));
@@ -1755,18 +2219,23 @@ define([
 					x: bounds.center_x, 
 					y: bounds.center_y
 				});			
+			},function(err){
+				console.error(ErrMsgs.CanvasReadyErr + " zoom to all models!");
 			});
 		},
 		
 		zoomToWholeWorkspace: function() {
 			var self=this;
 			this._canvasReady.promise.then(function(){
-				self.zoomTo_(ZoomController.getOptimalZoom(
+				var grnWrapper = dom.byId(self._cnvWrapperNodeId);
+				self.zoomTo_(self._zoomController.getOptimalZoom(
 	    			{w: self._workspaceDimensions.width, h: self._workspaceDimensions.height},
-	    			{w: dom.byId(self._cnvWrapperNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvWrapperNodeId).clientHeight-SCROLL_BAR_SIZE},
+	    			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
 	    			"WORKSPACE",
 	    			self.zoomStates_
 				));
+			},function(err){
+				console.error(ErrMsgs.CanvasReadyErr + " zoom to whole workspace!");
 			});
 		},
 				
@@ -1782,7 +2251,7 @@ define([
 			this._asyncModelLoader.promise.then(function(){
 				var thisNode = self.getSelectedNodes()[nodeId];
 				if(!thisNode) { return; };
-				var nodeBounds = canvasRenderer.getBoundsForIntersection(self.currentModel_.get("modelId_"),thisNode);
+				var nodeBounds = canvasRenderer.getBoundsForIntersection(self._currentModelId(),thisNode);
 				self._scrollToWorldPoint({
 					x: nodeBounds.min_x + (Math.abs(nodeBounds.max_x - nodeBounds.min_x))/2, 
 					y: nodeBounds.min_y + (Math.abs(nodeBounds.max_y - nodeBounds.min_y))/2
@@ -1835,15 +2304,18 @@ define([
 					}
     			})
 			);
-            								
+                        								
 			// Create the canvas and its virtual scrolling system and place them
 			this._buildCanvas();
 			
 			var grn = dom.byId(this._cnvContainerNodeId);
+			var grnWrapper = dom.byId(this._cnvWrapperNodeId);
 			
             // Squelch all default context menuing on the DIV container for the 
             // canvas and on the scrolling system containers
-            this.own(on(grn,"contextmenu",function(e){e.preventDefault();}));			
+            this.own(on(grn,"contextmenu",function(e){e.preventDefault();}));
+            
+            this._buildMouseHandlers();            
 						
 			// The canvas renderer is static, but we may need to initialize it if we are the
 			// first instantiated canvas
@@ -1865,17 +2337,26 @@ define([
 			// Bootstrap the first display of a model
 			this._canvasReady = new Deferred();
             this._loadModel().then(function(){
-	    		require([self._networkModelController,"controllers/ModelTreeController"],function(networkModelController,ModelTreeController){
+	    		require(["controllers/ArtboardController","views"],function(ArtboardController,BTViews){
+	    			var myAbC = ArtboardController.getArtboardController(self._cnvContainerNodeId);
 	    			// Set the optimal zoom as the beginning zoom level, then, check for an initial mode, and if it's provided use it
 	    			// (otherwise we'll ignore it).
-	            	self._currentZoomLevel = ZoomController.getOptimalZoom(
-            			{w: self.currentModel_.drawingObject_.model_w, h: self.currentModel_.drawingObject_.model_h},
-            			{w: dom.byId(self._cnvContainerNodeId).clientWidth-SCROLL_BAR_SIZE,h: dom.byId(self._cnvContainerNodeId).clientHeight-SCROLL_BAR_SIZE},
-            			"OPTIMAL_WHOLE_MODEL",
-            			self.zoomStates_
-        			);
+	    			if(!self.currentModel_.isGroupNode()) {
+		            	self._currentZoomLevel = self._zoomController.getOptimalZoom(
+	            			{w: self.currentModel_.drawingObject_.model_w, h: self.currentModel_.drawingObject_.model_h},
+	            			{w: (grnWrapper.clientWidth || self._lastWrapperSize.w)-SCROLL_BAR_SIZE,h: (grnWrapper.clientHeight || self._lastWrapperSize.h)-SCROLL_BAR_SIZE},
+	            			"OPTIMAL_WHOLE_MODEL",
+	            			self.zoomStates_
+	        			);
+	    			}
             		self._disableScrolling();
+            		
             		var firstDraw = function(){
+            			if(grnWrapper.clientWidth) {
+            				self._lastWrapperSize.w = grnWrapper.clientWidth;
+            				self._lastWrapperSize.h = grnWrapper.clientHeight;
+            			}
+            			
         				// Because there might have been a resizing of the container which holds the canvas, make the offCanvas now,
         				// and force a toggle and swap to ensure they're both the same size to start with. This way, any draws will
         				// be done with the canvases synced up.
@@ -1884,16 +2365,22 @@ define([
         					self._toggleCanvas();
         					self._swapCanvas();
         	    		}
-                		self._redraw(null,false,null,networkModelController.get("initialZoomMode_"),networkModelController.get("completeModelBounds_")).then(function(){
+
+                		self._redraw(null,false,null,myAbC.get("initialZoomMode_"),myAbC.get("completeModelBounds_")).then(function(){
             				self._canvasReady.resolve();
             				self._canvasIsReady = true;
             	            self._makeResizingAspect();
-                		});	
+                		},function(err){
+                			console.warn("[WARNING] Redraw rejected during Canvas setup!");
+                			if(self._canvasIsReady) {
+                				self._canvasIsReady = true;
+                	            self._makeResizingAspect();
+                			}
+                		});
+        				
         			};
         			if(self._isPrimaryCanvas) {
-                		ModelTreeController.getTreeWidget().then(function(tree){
-                			tree.getResizeDeferred().then(firstDraw);
-                		});	
+                		BTViews.getTreeResize(myAbC.get("tabId_")).then(firstDraw);
         			} else {
         				firstDraw();
         			}
@@ -1912,27 +2399,30 @@ define([
             
             // Once the first load is complete, place watch callbacks for changes in the ArtboardModel
             this._canvasReady.promise.then(function(){
-		    	self.watchers_["model"] = ArtboardController.getArtboardController(self._cnvContainerNodeId).setWatch("currentModel_",function(name,oldVal,newVal){
+            	var myAbC = ArtboardController.getArtboardController(self._cnvContainerNodeId);
+		    	self.watchers_["model"] = myAbC.setWatch("currentModel_",function(name,oldVal,newVal){
 		    		if(self._drawEventsGo) {
-			    		require([self._networkModelController,"controllers/ModelTreeController"],function(networkModelController,ModelTreeController){
-			    			if(self._isPrimaryCanvas) {
-			    				ModelTreeController.getTreeWidget().then(function(tree){
-			            			tree.getResizeDeferred().then(function(){
-			            				self._redraw(newVal,true,null,networkModelController.get("navZoomMode_")).then(function(){
-			            					if(!self._canvasIsReady) {
-			                    				self._canvasReady.resolve();
-			                    				self._canvasIsReady = true;
-			            					}
-			            				})
-			            			});
-			            		});
-			    			} else {
-	            				self._redraw(newVal,true,null,networkModelController.get("navZoomMode_")).then(function(){
+			    		require(["views"],function(BTViews){
+			    			var redrawAndReady = function() {
+			    				var myAbC = ArtboardController.getArtboardController(self._cnvContainerNodeId);
+	            				self._redraw(newVal,true,null,myAbC.get("navZoomMode_")).then(function(){
+	            					// If this is a redraw in response to a reload (from a session expiring or a new model), then
+	            					// the Canvas will have been flagged unready and should be re-readied.
 	            					if(!self._canvasIsReady) {
+	            						self._canvasIsReady = true;
 	                    				self._canvasReady.resolve();
-	                    				self._canvasIsReady = true;
+	            					}
+	            				},function(err){
+	            					if(self._canvasIsReady) {
+	            						self._canvasIsReady = false;
+	            						self._canvasReady.reject();
 	            					}
 	            				});
+			    			};
+			    			if(self._isPrimaryCanvas) {
+			    				BTViews.getTreeResize(myAbC.get("tabId_")).then(redrawAndReady);
+			    			} else {
+	            				redrawAndReady();
 			    			}
 			    		});
 		    		}
@@ -1951,6 +2441,8 @@ define([
 				});
 		    	self.own(self.watchers_["toggledRegions"]);			    	
 		    	
+			},function(err){
+				console.error(ErrMsgs.CanvasReadyErr + " setup!");
 			});
 	    },
 	    
@@ -1977,20 +2469,36 @@ define([
 		constructor: function(params) {
 			this._workspaceDimensions = {width: params.wsWidth, height: params.wsHeight};
 			this._drawEventsGo = true;
+			this._bufferedCanvases = !!params.bufferedCanvases;
 			this._cnvContainerNodeId = params.cnvContainerDomNodeId;
 			this._cnvWrapperNodeId = params.cnvWrapperDomNodeId;
-			this._networkModelController = params.networkModelController;
 			this._willDrawWorkspace = params.drawWorkspace;
 			this.id_ = params.id;
 			this.watchers_ = {};
 			this._scrollHandlers = {
-				scrollv: null,
-				scrollh: null
+				scrollv: {
+					enabled: false,
+					th: null,
+					db: null
+				},
+				scrollh: {
+					enabled: false,
+					th: null,
+					db: null
+				}
 			};
 			this.zoomStates_ = params.zoomStates;
-			this._currentZoomLevel = ZoomController.getDefaultZoom(); 
+			this._zoomController = new ZoomController(DEFAULT_ZOOM_LEVEL);
+			this._currentZoomLevel = this._zoomController.getDefaultZoom(); 
 			this.actionClickPending_ = false;
 			this._isPrimaryCanvas = !!params.primaryCanvas;
+			
+			// Top-level object for easy access to the mouse's current situation during event handling
+			this._mouseStatus = new MouseStatus({});
+			
+			this._mouseHandlers = new MouseHandlers({});
+			this._selexBox = new SelexBox({});
+			this._tooltip = new BTTooltip({});
 		}
 	});
 	
@@ -2060,8 +2568,8 @@ define([
 			_btCanvases[containerDomNodeId].zoomToWholeWorkspace();
 		},
 				
-		zoomToSelected: function(containerDomNodeId) {
-			_btCanvases[containerDomNodeId].zoomToSelected();
+		zoomToSelected: function(containerDomNodeId,focusCanvas) {
+			_btCanvases[containerDomNodeId].zoomToSelected(focusCanvas);
 		},
 		
 		removeResizingAspect: function(containerDomNodeId) {

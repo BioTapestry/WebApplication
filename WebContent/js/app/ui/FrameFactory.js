@@ -64,7 +64,7 @@ define([
 	
 	////////////////////////////
 	// _insertDialogIcon
-	//////////////////////////////
+	///////////////////////////
 	//
 	// Method to place an icon to label the Dialog, eg. in a simple alert dialog
 	
@@ -182,6 +182,14 @@ define([
 	// and act accordingly
 	
 	function _eventAction(e,thisEvent,btFrame,uiElementActions) {
+		// Combo Boxes normally return a value representing the current selection,
+		// but we want our event to be an object. Convert if this is a Combo Box
+		// event
+		if(sourceElement.uiElementType === "COMBO_BOX") {
+			e = {};
+			e.newVal = sourceElement.getItem(e.newVal);
+		}
+		
 		declare.safeMixin(e,{
 			form: btFrame.form,
 			selection: btFrame.gridSelected,
@@ -487,12 +495,7 @@ define([
 				}));
 			} else {
 				// All other elements can be placed using addChild
-				var placeThis;
-				if(element.elementType.indexOf("COMBO_BOX") >= 0) {
-					placeThis = childElement.getComboBox();
-				} else {
-					placeThis = childElement;
-				}
+				var placeThis = childElement;
 				
 				// Floating elements will fall wherever the containing pane has
 				// room for them. If we need an element to be on its own separate

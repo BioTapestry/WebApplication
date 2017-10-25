@@ -37,13 +37,13 @@ define([
 	utils
 ) {
 	
-	/**
-	 * SelectionGroup module which will place N number of radio buttons with 
-	 * labels into a DIV container with a span-label of its own. The RadioButtons
-	 * Will be dijit/form/RadioButton widgets
-	 * 
-	 * 
-	 */
+	/////////////////////////////
+	// SelectionGroup
+	////////////////////////////
+	//
+	// SelectionGroup module which will place N number of radio buttons with labels into a DIV container 
+	// with a span-label of its own. The RadioButtons are be dijit/form/RadioButton widgets
+
 
 	return declare([Destroyable,Evented],{
 		

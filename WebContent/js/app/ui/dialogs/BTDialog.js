@@ -60,7 +60,7 @@ define([
 		offset: null,
 				
 		forImmediateDestruction: null,
-		
+				
 		exec: function(cmd,args) {
 			
 		},
@@ -85,11 +85,12 @@ define([
 		registerOnShow: function(callback,justOnce) {
 			var self=this;
 			if(callback) {
-				var afterHandler = aspect.after(this,"show",function(e){
+				var afterHandler = aspect.after(this,"show",function(promise,e){
 					if(justOnce) {
 						afterHandler.remove();	
 					}
 					callback(e);
+					return promise;
 				});
 				if(!justOnce) {
 					self.own(afterHandler);
@@ -122,7 +123,7 @@ define([
 			
 			var self=this;
 			
-			this.own(aspect.after(this,"show",function(e){
+			this.own(aspect.after(this,"show",function(promise,e){
 				
 				if(self["class"] !== "nonModal") {
 					require(["dialogs"],function(BTDialogs){
@@ -134,22 +135,23 @@ define([
 				// but offset is for a specific dialog instance
 				var diagParent = self.containerNode.parentNode;
 
-				if((self.openAt || self.offset) && self.alwaysMove) {
+				if(((self.openAt !== null && self.openAt !== undefined) || self.offset) && self.alwaysMove) {
 					domStyle.set(
 						diagParent,
 						"left",
 						domStyle.get(diagParent,"left") + 
-							(self.openAt ? self.openAt.x : 0) + 
+							((self.openAt !== null && self.openAt !== undefined) ? self.openAt.x : 0) + 
 							(self.offset ? self.offset.x : 0) + "px"
 					);
 					domStyle.set(
 						diagParent,
 						"top",
 						domStyle.get(diagParent,"top") + 
-							(self.openAt ? self.openAt.y : 0) + 
+							((self.openAt !== null && self.openAt !== undefined) ? self.openAt.y : 0) + 
 							(self.offset ? self.offset.y : 0) + "px"
 					);
 				}
+				return promise;
 			}));
 			
 			require(["dojo/on"],function(on){

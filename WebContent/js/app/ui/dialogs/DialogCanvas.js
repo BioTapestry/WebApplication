@@ -37,6 +37,12 @@ define([
 	BTCanvas
 ) {
 
+	/////////////////////
+	// DialogCanvas
+	/////////////////////
+	//
+	// A wrapper for the BTCanvas class to manage its presense in a dialog box
+	
 	return declare([Stateful,Destroyable],{
 		
 		disabledContent_: null,
@@ -126,7 +132,7 @@ define([
 			registry.remove(this);
 			var self=this;
 			require(["controllers/ArtboardController"],function(ArtboardController){
-				ArtboardController.removeArtboardController(self.cnvContainerDomNodeId_);
+				ArtboardController.removeController(self.cnvContainerDomNodeId_);
 			});
 			this.destroy();
 		},

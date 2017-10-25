@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -33,7 +33,8 @@ define([
     "controllers/StatesController",
     "controllers/ActionCollection",
     "static/XhrUris",
-    "static/IconMap"
+    "static/IconMap",
+    "app"
 ],function(
 	declare,
 	Toolbar,
@@ -50,7 +51,8 @@ define([
 	StatesController,
 	ActionCollection,
 	XhrUris,
-	IconSet
+	IconSet,
+	appMain
 ) {
 	
 	return declare([],{
@@ -60,9 +62,9 @@ define([
 	    updatePlaceHolders: function(comboFills) {
 	    	for(var i in comboFills) {
 	    		if(comboFills.hasOwnProperty(i)) {
-	    			if(this.placeHolders[i]) {
+	    			if(this.placeHolders_[i]) {
 	    				if(comboFills[i].items_ && comboFills[i].items_.length > 0) {
-	    					this.placeHolders[i].set("disabled",false);
+	    					this.placeHolders_[i].set("disabled",false);
 	    					var items = [];
 	    					
 	    					DojoArray.forEach(comboFills[i].items_,function(item){
@@ -73,10 +75,10 @@ define([
 	    						data: items
 	    					});
 	    					
-	    					this.placeHolders[i].set("value",StatesController.getState(this.placeHolders[i].name) || comboFills[i].items_[0].name,false);
-	    					this.placeHolders[i].set("store",dataStore);
+	    					this.placeHolders_[i].set("value",StatesController.getState(this.placeHolders_[i].name,ActionCollection.GET_CURRENT_TAB()) || comboFills[i].items_[0].name,false);
+	    					this.placeHolders_[i].set("store",dataStore);
 	    				} else {
-	    					this.placeHolders[i].set("disabled",true);
+	    					this.placeHolders_[i].set("disabled",true);
 	    				}		    				
 	    			}
 	    		}
@@ -110,9 +112,9 @@ define([
     			})
         	);	
         					
-        	this.placeHolders = {};
+        	this.placeHolders_ = {};
         	
-			// Bootstrap the conditions to start with
+			// Any time these conditions change, update our bar
 			
 			DojoArray.forEach(["SHOW_PATH","DO_GAGGLE","SHOW_OVERLAY"],function(item) {
 				myToolbar.own(Conditions.watch(item,function(name,oldVal,newVal){
@@ -225,7 +227,7 @@ define([
 									}),
 									searchAttr: "label",
 									condition: item.condition,
-									typeAndKey: item.keyType + "_" + item.key,
+									typeAndKey: null,
 									onChange: function(e) {
 										var thisItem = this.item ? this.item : this.store.query({id: e})[0];
 										if(thisItem) {
@@ -236,7 +238,7 @@ define([
 									}
 								});	
 								toolbarItem.textbox.readOnly = true;
-								self.placeHolders[item.tag] = toolbarItem;
+								self.placeHolders_[item.tag] = toolbarItem;
 								break;
 							case "CHECKBOX_ACTION": 
 								toolbarItem = new ToggleButton({
@@ -263,8 +265,8 @@ define([
 							if(item.condition) {
 								toolbarItem.set("condition",item.condition);
 							}
-							myToolbarContents.push(toolbarItem);	
-							
+							myToolbarContents.push(toolbarItem);
+														
 							require(["controllers/StatesController"],function(StatesController){
 								if(toolbarItem.typeAndKey && StatesController.stateIsLocal(toolbarItem.typeAndKey)) {
 									myToolbar.own(
@@ -276,6 +278,19 @@ define([
 							});
 						}
 					});
+					
+					// Inject the Bindings toolbar button
+					myToolbarContents.push(new Button({
+						showLabel: false,
+						label: "Bindings",
+						name: "Keyboard and Mouse Bindings",
+						id: "keymap_btn",
+						iconClass: "BioTapestryIcons24 BioTapIcons724 BioTapIcons724Keybinds",
+						onClick: ActionCollection.CLIENT_KEYMAP,
+						typeAndKey: "CLIENT_KEYMAP"
+					}));
+
+					
 					if(myToolbarContents) {
 						rebuildToolbar_();
 						myToolbar.startup();

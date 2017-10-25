@@ -19,8 +19,6 @@
 
 define([
     "models/GrnModel",
-    "static/XhrUris",
-    "controllers/XhrController",
     "controllers/ActionCollection",
     "app/utils",
     "dojo/_base/declare",
@@ -31,8 +29,6 @@ define([
 	"dojo/domReady!"
 ],function(
 	GrnModel,
-	XhrUris,
-	xhrController,
 	ActionCollection,
 	utils,
 	declare,
@@ -178,7 +174,7 @@ define([
 									// default selected value might not be the same, and will otherwise be used
 									// once building the combo box is done.
 									widget.set("selValue",pathData.resultsMap.maxPath);
-									widget.parent_.buildValues(depths);
+									widget.buildValues(depths);
 								}
 								break;
 							case "pathMsg":
@@ -261,7 +257,7 @@ define([
 		makeBuiltCallback_: function(widgetId,callback) {
 			return function(e) {
 				callback(widgetId,e);
-			}
+			};
 		},
 		
 		// Get the GrnModel object which is named in currentModel_
@@ -312,10 +308,11 @@ define([
 		//
 		// TODO: watch condition from the Renderer to the GrnModel's cache status?
 		setCachedInRenderer: function(modelId,cacheStatus) {
+			var self=this;
 			this.PathModels_[modelId] && this.PathModels_[modelId].setCached(this.PathModels_[modelId].state,cacheStatus);
 			if(!cacheStatus) {
 				require(["views/BioTapestryCanvas"],function(BTCanvas){
-					BTCanvas.getBtCanvas("path").flushRendererCache([modelId]);
+					BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).flushRendererCache([modelId]);
 				});
 			}
 		},
@@ -346,6 +343,10 @@ define([
 	// Singleton
 	var BioTapPathingModelController = new PathingModelController();
 	
-	return BioTapPathingModelController;
+	return {
+		getModelController: function() {
+			return BioTapPathingModelController;
+		}
+	};
 
 });

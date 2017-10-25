@@ -19,10 +19,15 @@
 
 define([
     "./SelectionCommon",
-    "./overlay/NetModuleCommon"
+    "./overlay/NetModuleCommon",
+    "./overlay/NetOverlayCommon",
+    "./renderer/NetModuleRenderingSupport"
+
 ], function (
     SelectionCommon,
-    NetModuleCommon
+    NetModuleCommon,
+    NetOverlayCommon,
+    NetModuleRenderingSupportFactory
 ) {
 
     ///////////////////////////////////
@@ -32,110 +37,91 @@ define([
     // A module for point intersecting a model
     //
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Private functions
-    ////////////////////////////////////////////////////////////////////////////
+    var HitBoxSearchPrototype = {
+        ////////////////////////////////////////////////////////////////////////////
+        // Private functions
+        ////////////////////////////////////////////////////////////////////////////
 
-    ////////////////////////////////
-    // point_intersect_model
-    ////////////////////////////////
-    //
-    // Intersects a given point with given model.
-    //
-    // Returns an array containing found intersections.
-    //
-    var point_intersect_model = function(model_point, model, overlay_settings, overlay_alpha_settings) {
-        var selectable_nodes = SelectionCommon.getSelectableNodesForModel(model);
+        ////////////////////////////////
+        // pointIntersectSelectableNodes
+        ////////////////////////////////
+        //
+        // Intersects a given point with given model.
+        //
+        // Returns an array containing found intersections.
+        //
+        pointIntersectSelectableNodes: function(model_point, model) {
+            var selectable_nodes = SelectionCommon.getSelectableNodesForModel(model);
 
-        return _.reduce(selectable_nodes, function(found_nodes, node) {
-            var intersection = node.intersectPoint(model_point);
+            return _.reduce(selectable_nodes, function(found_nodes, node) {
+                var intersection = node.intersectPoint(model_point);
 
-            if (intersection !== null) {
-                found_nodes.push(intersection);
-            }
+                if (intersection !== null) {
+                    found_nodes.push(intersection);
+                }
 
-            return found_nodes;
-        }, []);
-    };
+                return found_nodes;
+            }, []);
+        },
 
-    ////////////////////////////////
-    // is_fall_through_point
-    ////////////////////////////////
-    //
-    // Determines if a point in an opaque overlay should only be intersected against
-    // the components of enabled overlay modules, or also in addition against the
-    // nodes of the model.
-    //
-    // Return true if both the module components and nodes of the model should be
-    // considered in the intersection.
-    //
-    // Returns false if only the module components should be considered.
-    //
-    var is_fall_through_point = function(model_point, model, overlay_settings, overlay_alpha_settings) {
-        var overlay = model.getOverlay(overlay_settings["id"]);
-        var enabled_modules = this.renderer.settings.overlay.enabled_modules;
-        var enabled_map = _.indexBy(enabled_modules, 'id');
-        var modules_list = _.filter(overlay.modules, function(module) {
-            return _.has(enabled_map, module['id']);
-        });
-        var intersected_modules = [];
+        ////////////////////////////////
+        // isFallThroughPoint
+        ////////////////////////////////
+        //
+        // Determines if a point in an opaque overlay should only be intersected against
+        // the components of enabled overlay modules, or also in addition against the
+        // nodes of the model.
+        //
+        // Return true if both the module components and nodes of the model should be
+        // considered in the intersection.
+        //
+        // Returns false if only the module components should be considered.
+        //
+        isFallThroughPoint: function(model_point, module_support) {
+            var intersected_modules = [];
 
-        _.each(modules_list, function(module_node) {
-            var intersection = module_node.intersectPointBoundary(model_point);
-
-            if (intersection == null) {
-                intersection = module_node.intersectPointInterior(model_point);
-            }
-
-            if (intersection !== null) {
-                intersected_modules.push(intersection);
-            }
-        });
-
-        var found = _.find(intersected_modules, function (module_intersection) {
-            var module_id = module_intersection["id"];
-            return enabled_map[module_id].show == true;
-        }, this);
-
-        return found !== undefined;
-    };
-
-    ////////////////////////////////
-    // point_intersect_enabled_modules
-    ////////////////////////////////
-    //
-    // Intersects given point with enabled modules of the currently enabled overlay.
-    // The components of each module that are considered for the intersection depend
-    // on the type of the overlay.
-    //
-    // Module components intersected for an opaque overlay:
-    // - boundary
-    // - interior
-    // - label
-    //
-    // Module components intersected for an underlay or a transparent overlay:
-    // - boundary
-    // - label
-    //
-    // Returns an array containing found module intersections.
-    //
-    var point_intersect_enabled_modules = function(model_point, model, overlay_settings) {
-        var overlay = model.getOverlay(overlay_settings["id"]);
-        var enabled_modules = this.renderer.settings.overlay.enabled_modules;
-        var enabled_map = _.indexBy(enabled_modules, 'id');
-        var modules_list = _.filter(overlay.modules, function(module) {
-            return _.has(enabled_map, module['id']);
-        });
-        var intersected_modules = [];
-
-        // Opaque overlay and unrevealed module - boundary and interior
-        // Opaque overlay and revealed module   - boundary only
-        if (overlay.getOverlayType() == "OPAQUE") {
-            _.each(modules_list, function(module_node) {
+            _.each(module_support.getVisibleNetModuleNodes(), function(module_node) {
                 var intersection = module_node.intersectPointBoundary(model_point);
 
                 if (intersection == null) {
-                    if (enabled_map[module_node["id"]].show == false) {
+                    intersection = module_node.intersectPointInterior(model_point);
+                }
+
+                if (intersection !== null) {
+                    intersected_modules.push(intersection);
+                }
+            });
+
+            var found = _.find(intersected_modules, function (module_intersection) {
+                return module_support.isShownNetModule(module_intersection["id"]);
+            }, this);
+
+            return found !== undefined;
+        },
+
+        ////////////////////////////////
+        // pointIntersectEnabledModulesForOpaqueOverlay
+        ////////////////////////////////
+        //
+        // Intersects given point with enabled modules of the currently enabled overlay.
+        // The components of each module that are considered for the intersection depend
+        // on the type of the overlay.
+        //
+        // Module components intersected for an opaque overlay:
+        // - boundary
+        // - interior
+        // - label
+        //
+        // Returns an array containing found module intersections.
+        //
+        pointIntersectEnabledModulesForOpaqueOverlay: function(model_point, module_support) {
+            var intersected_modules = [];
+
+            _.each(module_support.getVisibleNetModuleNodes(), function(module_node) {
+                var intersection = module_node.intersectPointBoundary(model_point);
+
+                if (intersection == null) {
+                    if (!module_support.isShownNetModule(module_node["id"])) {
                         intersection = module_node.intersectPointInterior(model_point);
                     }
                     else {
@@ -147,10 +133,29 @@ define([
                     intersected_modules.push(intersection);
                 }
             });
-        }
-        // Transparent overlay and unrevealed module - boundary only
-        else {
-            _.each(modules_list, function (module_node) {
+
+
+            return intersected_modules;
+        },
+
+        ////////////////////////////////
+        // pointIntersectEnabledModulesForTransparentOverlay
+        ////////////////////////////////
+        //
+        // Intersects given point with enabled modules of the currently enabled overlay.
+        // The components of each module that are considered for the intersection depend
+        // on the type of the overlay.
+        //
+        // Module components intersected for an underlay or a transparent overlay:
+        // - boundary
+        // - label
+        //
+        // Returns an array containing found module intersections.
+        //
+        pointIntersectEnabledModulesForTransparentOverlay: function(model_point, module_support) {
+            var intersected_modules = [];
+
+            _.each(module_support.getVisibleNetModuleNodes(), function (module_node) {
                 var intersection = module_node.intersectPointBoundary(model_point);
 
                 if (intersection === null) {
@@ -161,76 +166,65 @@ define([
                     intersected_modules.push(intersection);
                 }
             });
-        }
 
-        return intersected_modules;
-    };
+            return intersected_modules;
+        },
 
-    ////////////////////////////////
-    // point_intersect_model_with_underlay
-    ////////////////////////////////
-    //
-    // Intersects a given point with given model while an underlay or transparent overlay is enabled.
-    // Both the nodes of the model and modules of the overlay are considered.
-    //
-    // Returns an array containing found intersections.
-    //
-    var point_intersect_model_with_underlay = function(model_point, model, overlay_settings, overlay_alpha_settings) {
-        var intersection_result = [];
+        ////////////////////////////////
+        // pointIntersectModelWithUnderlay
+        ////////////////////////////////
+        //
+        // Intersects a given point with given model while an underlay or transparent overlay is enabled.
+        // Both the nodes of the model and modules of the overlay are considered.
+        //
+        // Returns an array containing found intersections.
+        //
+        pointIntersectModelWithUnderlay: function(model_point, model, module_support) {
+            var intersection_result = [];
 
-        // Find the module intersections that will be returned to the caller.
-        var intersected_modules_ret = this._point_intersect_enabled_modules(model_point, model, overlay_settings);
-        Array.prototype.push.apply(intersection_result, intersected_modules_ret);
+            // Find the module intersections that will be returned to the caller.
+            var intersected_modules_ret = this.pointIntersectEnabledModulesForTransparentOverlay(model_point, module_support);
+            Array.prototype.push.apply(intersection_result, intersected_modules_ret);
 
-        var intersected_nodes = point_intersect_model(model_point, model, overlay_settings, overlay_alpha_settings);
-        Array.prototype.push.apply(intersection_result, intersected_nodes);
-
-        return intersection_result;
-    };
-
-    ////////////////////////////////
-    // point_intersect_model_with_overlay
-    ////////////////////////////////
-    //
-    // Intersects a given point with given model while an opaque overlay is enabled.
-    // Both the nodes of the model and modules of the overlay are considered.
-    //
-    // Returns an array containing found intersections.
-    //
-    var point_intersect_model_with_overlay = function(model_point, model, overlay_settings, overlay_alpha_settings) {
-        var intersection_result = [];
-
-        // Find the module intersections that will be returned to the caller.
-        var intersected_modules_ret = this._point_intersect_enabled_modules(model_point, model, overlay_settings);
-        Array.prototype.push.apply(intersection_result, intersected_modules_ret);
-
-        var fall_through = false;
-
-        if (overlay_alpha_settings.regionFillAlpha <= NetModuleCommon.Settings.INTERSECTION_CUTOFF) {
-            fall_through = true;
-        }
-        else {
-            fall_through = this._is_fall_through_point(model_point, model, overlay_settings, overlay_alpha_settings);
-        }
-
-        if (fall_through) {
-            var intersected_nodes = point_intersect_model(model_point, model, overlay_settings, overlay_alpha_settings);
+            var intersected_nodes = this.pointIntersectSelectableNodes(model_point, model);
             Array.prototype.push.apply(intersection_result, intersected_nodes);
-        }
 
-        return intersection_result;
-    };
+            return intersection_result;
+        },
 
-    var HitBoxSearchPrototype = {
-        _is_fall_through_point: is_fall_through_point,
+        ////////////////////////////////
+        // pointIntersectModelWithOpaqueOverlay
+        ////////////////////////////////
+        //
+        // Intersects a given point with given model while an opaque overlay is enabled.
+        // Both the nodes of the model and modules of the overlay are considered.
+        //
+        // Returns an array containing found intersections.
+        //
+        pointIntersectModelWithOpaqueOverlay: function(model_point, model, module_support, regionFillAlpha) {
+            var intersection_result = [];
 
-        _point_intersect_enabled_modules: point_intersect_enabled_modules,
+            // Find the module intersections that will be returned to the caller.
+            var intersected_modules_ret = this.pointIntersectEnabledModulesForOpaqueOverlay(model_point, module_support);
 
-        _point_intersect_model: point_intersect_model,
+            Array.prototype.push.apply(intersection_result, intersected_modules_ret);
 
-        _point_intersect_model_with_underlay: point_intersect_model_with_underlay,
-        _point_intersect_model_with_overlay: point_intersect_model_with_overlay,
+            var fall_through = false;
 
+            if (regionFillAlpha <= NetModuleCommon.Settings.INTERSECTION_CUTOFF) {
+                fall_through = true;
+            }
+            else {
+                fall_through = this.isFallThroughPoint(model_point, module_support);
+            }
+
+            if (fall_through) {
+                var intersected_nodes = this.pointIntersectSelectableNodes(model_point, model);
+                Array.prototype.push.apply(intersection_result, intersected_nodes);
+            }
+
+            return intersection_result;
+        },
 
         ////////////////////////////////
         // _pointIntersectModel
@@ -243,34 +237,36 @@ define([
         //
         // Returns null if no intersection is found.
         //
-        _pointIntersectModel: function(model_point, model, overlay_settings, overlay_alpha_settings, rendering_context) {
+        _pointIntersectModel: function(model_point, model, overlay_settings) {
+            var module_support = NetModuleRenderingSupportFactory.create(model, overlay_settings);
             var overlay;
             var overlay_type;
+            var alpha_settings = overlay_settings.getAlphaSettings();
 
             // If overlays are disabled, only intersect the nodes in the model.
-            if (overlay_settings.id === null) {
-                return this._point_intersect_model(model_point, model, overlay_settings, overlay_alpha_settings)
+            if (! overlay_settings.isEnabled()) {
+                return this.pointIntersectSelectableNodes(model_point, model);
             }
             else {
-                overlay = model.getOverlay(overlay_settings["id"]);
+                overlay = model.getOverlay(overlay_settings.getEnabledID());
                 overlay_type = overlay.getOverlayType();
             }
 
             // Handle intersection when an overlay is enabled and it's type is transparent or underlay.
-            if (overlay_type == "UNDERLAY" ||
-                overlay_type == "TRANSPARENT") {
-                return this._point_intersect_model_with_underlay(model_point, model, overlay_settings, overlay_alpha_settings);
+            if (overlay_type == NetOverlayCommon.OverlayTypes.UNDERLAY_TYPE ||
+                overlay_type == NetOverlayCommon.OverlayTypes.TRANSPARENT_TYPE) {
+                return this.pointIntersectModelWithUnderlay(model_point, model, module_support);
             }
 
             // If the overlay type is opaque, no modules are enabled and the opacity of the overlay is set to maximum,
             // there is nothing to intersect. Therefore return null.
-            if (overlay_settings.enabled_modules.length == 0 &&
-                overlay_alpha_settings.backgroundOverlayAlpha == 1) {
+            if (module_support.getVisibleNetModuleNodes().length == 0 &&
+                alpha_settings.backgroundOverlayAlpha == 1) {
                 return null;
             }
 
             // Do intersection with opaque overlay rules.
-            return this._point_intersect_model_with_overlay(model_point, model, overlay_settings, overlay_alpha_settings);
+            return this.pointIntersectModelWithOpaqueOverlay(model_point, model, module_support, alpha_settings.regionFillAlpha);
         }
     };
 

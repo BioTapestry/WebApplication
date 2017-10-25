@@ -69,7 +69,8 @@ define([
 				if(args.cmdKey) {
 					var retry = 0;
 					var fetchData = function() {
-						xhrController.xhrRequest(XhrUris.cmd(args.cmdClass, args.cmdKey,{objectID: args.objId, genomeID: args.genomeKey})).then(function(response){
+						xhrController.xhrRequest(XhrUris.cmd(args.cmdClass, args.cmdKey,
+							{objectID: args.objId, genomeID: args.genomeKey, currentTab: args.currentTab})).then(function(response){
 							if(response.resultsMap.ExperimentalData.incomplete) {
 								dojoHtml.set(dom.byId(args.loadTo),response.resultsMap.ExperimentalData.HTML,{extractContent: true});
 								if(retry < MAX_RETRIEVAL_RETRIES) {

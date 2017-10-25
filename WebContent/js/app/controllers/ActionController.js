@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -20,12 +20,14 @@
 define([
     "./XhrController",
     "static/XhrUris",
+    "static/TextMessages",
     "models/ClientState",
     "dojo/_base/declare",
     "dojo/_base/array"
 ],function(
 	XhrController,
 	XhrUris,
+	TxtMsgs,
 	ClientState,
 	declare,
 	DojoArray
@@ -35,15 +37,18 @@ define([
 	// ActionController
 	//////////////////////////////////
 	//
-	// A module for stepping through a series of action steps based on user and server events
+	// A module for stepping through a series of action steps based on user and server events.
+	//
 	// The module maintains a private set of current 'live' actions (in progress or paused)
+	// based on their action name. Actions which can have multiple versions of themselves in 
+	// process must provide a unique ID when instantiated.
 	
 	var ActionControllers = {};
 	var actionCounts = {};
 	
 	var ActionController = declare([],{
 		
-		// Some actions may have arguments which 
+		// Some actions may have arguments which
 		persistentArgs_: null,
 		
 		// For actions which can have multiple instances running at the same time,
@@ -67,24 +72,28 @@ define([
 		// to a stepData object which will be sent to the onSuccess_ function
 		resultsMap_: null,
 		
-		// If there is a dialog, the step to be taken after one of the dialog's action buttons are clicked
-		// default is to report the findings to the server
+		// If there is a dialog, the default step to be taken after one of the dialog's action buttons is clicked
+		// is to report the findings to the server
 		postDialogStep_: "SEND_DIALOG_RESULT",
 		
+		// Frames are independent windows or dialogs, so we always end the action after launching them
+		postFrameStep_: "END",
+		
+		// By default we end if the server tells us we were successful
 		postSuccessStep_: "END",
 		
 		/////////////////////////////
 		// _resultsBundler
 		/////////////////////////////
 		//
-		// collects data from a dialog
+		// Collect data from a dialog
 		//
 		_resultsBundler: function(stepData) {
 			
 			var selections,selectionBundlers = {};
 			
-			// Collect all the selections into an array of objects and 
-			// note their bundleAs properties (if there are any)
+			// If there was a list-selection widget, collect all the selections into
+			// an array of objects and note their bundleAs properties (if there are any)
 			if(stepData.selection) {
 				var selections = new Array();
 				for(var i in stepData.selection) {
@@ -103,8 +112,7 @@ define([
 						}
 					}
 				}
-			}
-						
+			}	
 			if(!stepData.bundleMap && selections) {
 				if(stepData.selection.selectionMode === "single") {
 					stepData.newVal = selections[0];
@@ -113,22 +121,27 @@ define([
 				}
 			}
 			
+			// Go through the bundleMap, attempting to bundle results from
+			// various sources
 			for(var i in stepData.bundleMap) {
 				// Form data bundler
 				if(stepData.form[stepData.bundleMap[i]]) {
-					// Single array members whose value equals the bundler name are
-					// actually checkboxes in disguise, so just put their presense through
-					// as 'true'
+					var uiStore = stepData.userInputs;
+					// If this needs to be further sub-bundled, do that
+					if(stepData.bundleIn && stepData.bundleIn[i]) {
+						uiStore = stepData.userInputs[stepData.bundleIn[i]];
+					}
+					
+					// 1- or 0-length arrays whose value equals the bundler name are
+					// actually stand-alone checkboxes in disguise
 					if(stepData.form[stepData.bundleMap[i]] instanceof Array
-						&& stepData.form[stepData.bundleMap[i]].length === 1) {
-						if(stepData.form[stepData.bundleMap[i]][0] === stepData.bundleMap[i]) {
-							stepData.userInputs[i] = true;
-						} 
+						&& stepData.form[stepData.bundleMap[i]].length <= 1) {
+						uiStore[i] = stepData.form[stepData.bundleMap[i]].length === 1;
 					} else {
-						stepData.userInputs[i] = stepData.form[stepData.bundleMap[i]];	
+						uiStore[i] = stepData.form[stepData.bundleMap[i]];	
 					}	
 					
-				// selection bundler
+				// list-select widget bundler
 				} else if(selectionBundlers[i]) {						
 
 					// If this is for returning via a userInputs object
@@ -143,13 +156,20 @@ define([
 					} else {
 						stepData.newVal = selections;
 					}
+				// Extra-form, non-list widget bundler (eg. buttons)
+				} else if(stepData[i]) {
+					stepData.userInputs[i] = stepData[i];
 				}
-				// If, after these two checks, there is still nothing in userInputs
+				
+				// If, after these three checks, there is still nothing in userInputs
 				// for this bundle, make sure to set it null so that on deserialization
 				// the object is null
 				if(stepData.userInputs[i] === undefined) {
 					stepData.userInputs[i] = null;
-				}				
+				}
+			}
+			if(this.persistentArgs_) {
+				this.persistentArgs_.userInputs = stepData.userInputs;
 			}
 		},
 		
@@ -157,10 +177,8 @@ define([
 		// _runAction
 		////////////////////////////
 		//
-		// Kick off this action in some way
-		// If the action already exists, this may be a continuatin of an action already in progress, 
-		// and any new IDs or action args will be ignored, though persistentArgs will be brought
-		// forward
+		// If the action already exists, any new args will be ignored unless they are set
+		// as persistentArgs, in which case they are brought forward
 		//
 		_runAction: function(stepData) {
 			var self=this;
@@ -177,6 +195,7 @@ define([
 				this.resultsMap_ = stepData.resultsMap;
 				this.postSuccessStep_ = (stepData.postSuccessStep ? stepData.postSuccessStep : this.postSuccessStep_);
 				this.postDialogStep_ = (stepData.postDialogStep ? stepData.postDialogStep : this.postDialogStep_);
+				this.postFrameStep_ = (stepData.postFrameStep ? stepData.postFrameStep : this.postFrameStep_);
 				
 				var actionType = this.action_.cmdClass + "_" + this.action_.cmdKey;
 				
@@ -196,13 +215,20 @@ define([
 				var reqArgs = {
 					method: "POST"
 				};
+				var stateParams = {
+					currentTab: stepData.currTab || 0
+				};
+				
 				if(stepData.overlay) {
-					reqArgs.data = JSON.stringify(ClientState.getNewStateObject({
-						currOverlay: stepData.overlay.id,
-						enabledMods: stepData.overlay.enabled_modules
-					}));
-					reqArgs.headers = {"Content-Type":"application/json"};
+					stateParams.currOverlay = stepData.overlay.id;
+					stateParams.enabledMods = stepData.overlay.enabled_modules;	
 				}
+				reqArgs.data = JSON.stringify(ClientState.getNewStateObject(stateParams));
+				reqArgs.headers = {"Content-Type":"application/json"};
+				if(!this.action_.args) {
+					this.action_.args = {};
+				}
+				this.action_.args.currentTab = stepData.currTab;
 				XhrController.xhrRequest(XhrUris.cmd(this.action_.cmdClass,this.action_.cmdKey,this.action_.args),reqArgs).then(function(response){
 					if(response.reply) {
 						alert(response.reply);
@@ -252,7 +278,7 @@ define([
 		//
 		_cancel: function() {
 			var self=this;
-			XhrController.xhrRequest(XhrUris.cmd(self.action_.cmdClass,self.action_.cmdKey,{cancel: true})).then(function(response){
+			XhrController.xhrRequest(XhrUris.cmd(self.action_.cmdClass,self.action_.cmdKey,{currentTab: self.action_.args.currentTab, cancel: true})).then(function(response){
 				if(response.resultType === "CANCEL") {
 					require(["views"],function(BTViews){
 						BTViews.updateViewStates(response.resultsMap);
@@ -274,17 +300,121 @@ define([
 			this.currentDialog_ = null;
 		},
 		
+		////////////////////
+		// _prepareClick
+		///////////////////
+		//
+		// Attach a click event to the Canvas's containing DOM node
+		//
+		_prepareClick: function(stepData) {
+			var self=this;
+			require(["controllers/ClickWaitController"],function(ClickWaitController){				
+				ClickWaitController.installClick({
+					clickId: stepData.clickId, 
+					callback: stepData.clickCallback,
+					action: stepData.clickAction,
+					canvasId: stepData.drawingAreaId,
+					type: "ACTION",
+					statesAndMasks: self.currentStep_.response.resultsMap,
+					stepData: stepData
+				});
+			});
+			self.currentStep_.step = "SEND_CLICK_RESULT";
+		},
+		
+		/////////////////////
+		// _sendClickResult
+		////////////////////
+		//
+		// Report the results of a click event on the Canvas' containing DOM node
+		//
+		_sendClickResult: function(stepData) {
+			var self=this;
+			var args = {
+				x: stepData.translatedClick.x,
+				y: stepData.translatedClick.y,
+				objID: stepData.id,
+				currentTab: stepData.currTab
+			};
+			
+			XhrController.xhrRequest(XhrUris.cmd(this.action_.cmdClass,this.action_.cmdKey,args),{
+				method: "POST", 
+				headers: {"Content-Type":"application/json"}
+			}).then(function(response){
+				self.currentStep_ = {
+					step: response.resultType,
+					response: response									
+				};
+				if(response.resultType !== "ILLEGAL_CLICK_PROCESSED") {
+					require(["controllers/ClickWaitController"],function(ClickWaitController){
+						ClickWaitController.uninstallClick(stepData.clickId,response);
+					});
+				}
+				self._runAction(stepData);
+			},function(err){
+				if(err.status === "NEW_SESSION") {
+					self._end();
+					require(["controllers/ActionCollection"],function(ActionCollection){
+						ActionCollection.CLIENT_WARN_RESTART_SESSION();
+					});
+				}
+			});			
+		},
+		
+		///////////////////////////
+		// _buildAndShowStackPage
+		///////////////////////////
+		//
+		// Given a server response which contains a stack page definition, build that page and display it 
+		//
+		_showStackPage: function() {
+			var self=this;
+			
+			require(["controllers/ActionCollection"],function(ActionCollection){
+				ActionCollection.CLIENT_SHOW_STACKPAGE(self.currentStep_.response.resultsMap.stackPage);
+			});
+		},
+		
+		//////////////////
+		// _launchFrame
+		//////////////////
+		//
+		// Given a server response which contains a frame definition, build that frame and display it
+		//
+		_launchFrame: function(stepData) {
+			var self=this;
+			if(!stepData || !stepData.frame) {
+				console.error("[ERROR] Frame information was not provided!");
+				return;
+			}
+			require(["controllers/WindowController"],function(WindowController){
+				WindowController.openWindow({
+					id: stepData.frame.id, uri: stepData.frame.uri, title: stepData.frame.title, 
+					failoverType: stepData.frame.failOver, controllerName: stepData.frame.controller,
+					dimensions: { h: stepData.frame.h, w: stepData.frame.w }
+				}).then(function(){
+					self.currentStep_.response.clientMode = stepData.frame.clientMode;
+					WindowController.sendCmdToWindow(stepData.frame.id,stepData.frame.postOpen,self.currentStep_.response);
+					self.currentStep_.step = self.postFrameStep_;
+					self.currentStep_.response = null;
+					self._runAction(stepData);
+				});
+			});
+		},
+		
 		/////////////////////////
 		// _buildAndShowDialog
 		////////////////////////
 		//
 		//
-		// Given a dialog type, uses the dialog definition stored in the currentStep_.response to 
-		// construct and show it
+		// Given a dialog type, uses a dialog definition to construct and show the dialog
+		// The dialog definition can be stored in the currentStep_.response or obtained from the
+		// DialogFactory 
 		//
-		_buildAndShowDialog: function() {
+		_buildAndShowDialog: function(dialogType,msg,nextStep) {
 			var self=this;
-			switch(this.currentStep_.response.resultsMap.dialog.dialogType) {
+			dialogType = dialogType || this.currentStep_.response.resultsMap.dialog.dialogType;
+			switch(dialogType) {
 				case "PLAIN":
 					require(["views"],function(BTViews){
 						BTViews.updateViewStates(self.currentStep_.response.resultsMap);
@@ -313,25 +443,31 @@ define([
 					break;
 				case "YES_NO_OPTION":
 				case "ERROR":
+				case "WARNING":
 					require(["views"],function(BTViews){
 						BTViews.updateViewStates(self.currentStep_.response.resultsMap);
 					});	
 					
 					require(["dialogs/DialogFactory"],function(DialogFactory){
-						var errorDialog = DialogFactory.buildDialog({
-							type: self.currentStep_.response.resultsMap.dialog.dialogType,
-							definition: self.currentStep_.response.resultsMap.dialog,
-							offset: {x: -10,y: -10},
-							isModal: true
-						});
+						var errorDialog;
+						if(!self.currentStep_.response.resultsMap.dialog) {
+							errorDialog = DialogFactory.makeBasicErrorDialog({title: "Error",content: msg || TxtMsgs.GENERIC_ERROR});
+						} else {
+							errorDialog = DialogFactory.buildDialog({
+								type: dialogType,
+								definition: self.currentStep_.response.resultsMap.dialog,
+								offset: {x: -10,y: -10},
+								isModal: true
+							});
+						}
 						
 						errorDialog.show();
-						self.currentStep_.step = "SEND_DIALOG_RESULT";
+						self.currentStep_.step = nextStep || self.postDialogStep_ || "SEND_DIALOG_RESULT";
 						self.currentStep_.response = null;
 					});
 					break;
 				default:
-					console.warn("Did not recognize the dialog type " + this.currentStep_.response.resultsMap.dialog.dialogType);
+					console.error("[ERROR] Did not recognize the dialog type '" + dialogType +"'");
 			}
 		},
 		
@@ -349,7 +485,6 @@ define([
 			this._parseStep(stepData);
 		},
 		
-		
 		///////////////////////////////////
 		// _sendDialogResult
 		//////////////////////////////////
@@ -362,7 +497,21 @@ define([
 
 			this._resultsBundler(stepData);
 			
-			XhrController.xhrRequest(XhrUris.cmd(this.action_.cmdClass,this.action_.cmdKey),{
+			var args = {currentTab: stepData.currTab};
+			
+			switch(stepData.dialogType) {
+				case "YES_NO_CANCEL_OPTION":
+				case "YES_NO_OPTION":
+					args.formButton= stepData.buttonClicked;
+					break;
+				case "QUESTION":
+				case "OPTION_OPTION":
+					break;
+				default:
+					break;			
+			}
+			
+			XhrController.xhrRequest(XhrUris.cmd(this.action_.cmdClass,this.action_.cmdKey,args),{
 				data: JSON.stringify(stepData.userInputs),
 				method: "POST", 
 				headers: {"Content-Type":"application/json"}
@@ -371,6 +520,7 @@ define([
 					step: response.resultType,
 					response: response									
 				};
+				stepData.dialogType = null;
 				self._runAction(stepData);
 			},function(err){
 				if(err.status === "NEW_SESSION") {
@@ -395,14 +545,26 @@ define([
 			var self=this;
 			switch(this.currentStep_.step) {
 				case "XPLAT_DIALOG":
-				case "XPLAT_FRAME":
 					this._buildAndShowDialog();
+					break;				
+				case "XPLAT_FRAME":
+					this._launchFrame(stepData);
+					break;
+				case "STACK_PAGE":
+					self.currentStep_.step = self.postDialogStep_;
+					this._showStackPage();
 					break;
 				case "SEND_DIALOG_RESULT":
 					this._sendDialogResult(stepData);
 					break;
+				case "SEND_CLICK_RESULT":
+					this._sendClickResult(stepData);
+					break;
 				case "PARSE_DIALOG_RESULT":
 					this._parseDialogResult(stepData);
+					break;
+				case "WAITING_FOR_CLICK":
+					this._prepareClick(stepData);
 					break;
 				case "SUCCESS":
 					require(["views"],function(BTViews){
@@ -414,10 +576,10 @@ define([
 							BTViews.updateViewStates(self.currentStep_.response.resultsMap);
 						}
 						
-						self.currentStep_.step = self.postSuccessStep_;
+						self.currentStep_.step = stepData.forApply ? self.postDialogStep_ : self.postSuccessStep_;
 						
 						// END and CLOSE are processed immediately
-						if(self.postSuccessStep_ === "END" || self.postSuccessStep_ === "CLOSE") {
+						if(!stepData.forApply && (self.postSuccessStep_ === "END" || self.postSuccessStep_ === "CLOSE")) {
 							self._end();
 						}
 					});
@@ -430,12 +592,14 @@ define([
 					this._end();				
 					break;
 				case "ILLEGAL_CLICK_PROCESSED":
+					this._buildAndShowDialog("ERROR",TxtMsgs.BAD_CLICK,"SEND_CLICK_RESULT");
+					break;					
 				case "PROCESSING_ERROR":
 				case "PARAMETER_ERROR":
 					this._buildAndShowDialog("ERROR");		
 					break;
 				default:
-					console.warn("Reached default in switch: ",this.currentStep_);
+					console.error("[ERROR] Reached default in _parseStep for '",this.currentStep_.step+"'");
 					break;
 			}
 		},

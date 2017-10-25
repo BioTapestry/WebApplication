@@ -104,6 +104,10 @@
 	background-image: url(../images/IconSheet724.png);
 }
 
+.dijitDisabled .BioTapIcons724 {
+	background-image: url(../images/IconSheet7Disabled24.png);
+}
+
 .ZoomIcons24Zoom { background-position: 0px; }
 .ZoomIcons24ZoomIn {	background-position: -24px; }
 .ZoomIcons24ZoomOut { background-position: -48px; }
@@ -172,3 +176,4 @@
 .BioTapIcons724Failure { background-position: -24px; }
 .BioTapIcons724Error { background-position: -48px; }
 .BioTapIcons724Warning { background-position: -72px; }
+.BioTapIcons724Keybinds { background-position: -96px; }

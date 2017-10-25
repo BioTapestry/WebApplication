@@ -45,7 +45,7 @@ define([
 		outState: "MAIN_ZOOM_OUT"
 	};
 	
-	var StatefulZoomer = declare([Stateful],{	
+	return declare([Stateful],{	
 		
 		// defaultZoomLevel_
 		//
@@ -100,16 +100,11 @@ define([
 		zoomValues_: new Array(0.06, 0.12, 0.20, 0.25, 0.33, 0.38, 
 			0.44, 0.50, 0.62, 0.67, 0.75, 0.85, 1.0, 1.25, 1.5, 2.0),
 							
-		/*****************************
-		 * updateStates
-		 ***************************** 
-		 * 
-		 * 
-		 * 
-		 * @param zoomLevel
-		 * @param states
-		 * 
-		 */
+		//////////////////////
+		// updateStates
+		/////////////////////
+		//
+		//
 		updateStates: function(zoomLevel,states) {
 			var self=this;
 			require(["controllers/StatesController"],function(StatesController){
@@ -127,21 +122,31 @@ define([
 			});				
 		},
 		
-		/***********************
-		 * zoomIn
-		 ***********************
-		 *
-		 * If we are using a custom zoom, move to the main set of zoom values and return
-		 * 0. If we are on the main set of zoom values, return the next highest one if
-		 * possible, otherwise, return the highest possible array index.
-		 * 
-		 * Update the zoom states represented by the parameter states regardless of return value.
-		 * 
-		 * @param zoomLevel
-		 * @param states
-		 * @returns
-		 * 
-		 */
+		////////////////////
+		// disableZooming
+		///////////////////
+		//
+		//
+		disableZooming: function(states) {
+			require(["controllers/StatesController"],function(StatesController){
+				StatesController.setState(states.inState,false);
+				StatesController.setState(states.outState,false);
+			});		
+		},
+		
+		/////////////////
+		// zoomIn
+		////////////////
+		//
+		// If we are using a custom zoom, move to the main set of zoom values and return
+		// 0. If we are on the main set of zoom values, return the next highest one if
+		// possible, otherwise, return the highest possible array index.
+		// 
+		// Update the zoom states represented by the parameter states regardless of return value.
+		// 
+		// @param zoomLevel
+		// @param states
+		// @returns
 		zoomIn: function(zoomLevel,states) {
 			if(this.useCustomZoom_) {
 				this.useCustomZoom_ = false;
@@ -192,8 +197,9 @@ define([
 		 * getZoomValue
 		 **********************************
 		 * 
-		 * Return the current zoom scale value (eg. 0.06 for 6% scaling) as represented
-		 * in either the customZoomValues array or the zoomValues array.
+		 * Return the zoom scale value (eg. 0.06 for 6% scaling) as represented
+		 * in either the customZoomValues array or the zoomValues array, at the
+		 * provided level.
 		 * 
 		 * 
 		 * @param level
@@ -205,8 +211,7 @@ define([
 				return this.customZoomValues_[level];
 			}
 			return this.zoomValues_[level];
-		},
-		
+		},	
 		
 		/**
 		 * 
@@ -242,7 +247,12 @@ define([
 				case "OPTIMAL_SELECTED":
 					var widthZoom = clientSize.w/modelSize.w;
 					var heightZoom = clientSize.h/modelSize.h;
-					optimalZoom = widthZoom > heightZoom ? heightZoom : widthZoom;
+					optimalZoom = Math.min(widthZoom,heightZoom);
+					break;
+				case "OPTIMAL_GROUP_NODE":
+					var widthZoom = clientSize.w/modelSize.w;
+					var heightZoom = clientSize.h/modelSize.h;					
+					optimalZoom = Math.min(1.0,widthZoom,heightZoom);
 					break;
 				default: 
 			
@@ -329,7 +339,4 @@ define([
 		}
 	});
 	
-	var ZoomController = new StatefulZoomer(5);
-	
-	return ZoomController;
 });

@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -26,6 +26,7 @@ define([
     "dojo/_base/array",
     "app/utils",
     "dijit/Destroyable",
+    "static/BTConst",
 	"dojo/domReady!"
 ],function(
 	ArtboardModel,
@@ -35,10 +36,11 @@ define([
 	Stateful,
 	DojoArray,
 	utils,
-	Destroyable
+	Destroyable,
+	BTConst
 ){
 	
-	var TOOLTIP_DEFAULT_DELAY = 300;
+	var TOOLTIP_DEFAULT_DELAY = 400;
 	
 	var NETWORK_CONTROLLER_DEFAULT = "controllers/GrnModelController";
 	
@@ -49,9 +51,19 @@ define([
 	// A module for controlling an ArtboardModel and its associated BioTapestryCanvas
 	
 	var ArtboardController = declare([Stateful,Destroyable],{
+		
+		navZoomMode_: null,
+		
+		initialZoomMode_: null,
+		
+		completeModelBounds_: null,
+		
+		// The tabId of the GrnModelController this ArtboardController will watch for state changes
+		// In the case of a floating artboard this value will remain null
+		tabId_: null,
 				
 		// Currently selected items can be traversed individually, so the set must be
-		// maintained (as a copy) in a consistantly sorted order, and an index into that
+		// maintained (as a copy) in a consistently sorted order, and an index into that
 		// set must be available
 		selSetKeys_: null,
 		selSetTraversalIdx_: null,
@@ -82,14 +94,16 @@ define([
 			return this.currentModel_;
 		},
 		_currentModel_Setter: function(newModel) {
-			if(this.currentModel_ !== newModel && this.currentModel_ !== "default_") {
-				this._updateStatesForSelection();
-			}
+			this.currentModel_ !== newModel && this.currentModel_ !== "default_" && this.updateStatesForSelection();
 			this.currentModel_ = newModel;
+			this.ArtboardModels_[this.currentModel_] && this.ArtboardModels_[this.currentModel_].nodeType_ === BTConst.NODETYPE_GROUP && this.updateZoomStates();
 		},
 		
 		overlay_: null,
 		_overlay_Getter: function() {
+			if(!this.ArtboardModels_[this.currentModel_]) {
+				return null;
+			}
 			return this.ArtboardModels_[this.currentModel_].get("overlay_");
 		},
 		_overlay_Setter: function(val) {
@@ -140,6 +154,7 @@ define([
 				this.ArtboardModels_["default_"].set("notes_",notes);
 				this.ArtboardModels_["default_"].set("moduleDescs_",moduleDescs);
 				this.ArtboardModels_["default_"].set("depth_",model.depth_);
+				this.ArtboardModels_["default_"].set("nodeType_",model.nodeType);
 				this.ArtboardModels_[modelId] = this.ArtboardModels_["default_"];
 				this.ArtboardModels_["default_"].set("asyncModelLoader",asyncLoader);
 				delete this.ArtboardModels_.default_;
@@ -153,6 +168,7 @@ define([
 					moduleDescs_: moduleDescs,
 					depth_: model.depth_,
 					vfgParent_: model.vfgParent_,
+					nodeType_: model.nodeType,
 					asyncModelLoader: asyncLoader
 				});
 			}	
@@ -170,22 +186,24 @@ define([
 		// Returns true if there was a selection change, false if not.
 		//
 		_compareSelections: function(newSelex,oldSelex) {
-			if(utils.objectPropertyCount(newSelex) !== utils.objectPropertyCount(oldSelex)) {
+			if(Object.keys(newSelex).length !== Object.keys(oldSelex).length) {
 				return true;
 			} 
 			for(var i in newSelex) {
-				if(!oldSelex[i]) {
-					return true;
-				} 
-				if(oldSelex[i].getType() === "linkage") {
-					if(!(oldSelex[i].segments && newSelex[i].segments)) {
+				if(newSelex.hasOwnProperty(i)) {
+					if(!oldSelex[i]) {
 						return true;
-					}
-					if(oldSelex[i].segments.length !== newSelex[i].segments.length) {
-						return true;
-					}
-					if(_.difference(oldSelex[i].segments,newSelex[i].segments).length > 0) {
-						return true;
+					} 
+					if(oldSelex[i].getType() === "linkage") {
+						if(!(oldSelex[i].segments && newSelex[i].segments)) {
+							return true;
+						}
+						if(oldSelex[i].segments.length !== newSelex[i].segments.length) {
+							return true;
+						}
+						if(_.difference(oldSelex[i].segments,newSelex[i].segments).length > 0) {
+							return true;
+						}
 					}
 				}
 			}
@@ -317,10 +335,13 @@ define([
 		//////////////////////////////////
 		//
 		//
-		_updateStatesForSelection: function(nodes) {
+		updateStatesForSelection: function(nodes,useCurrent) {
 			var self=this;
+			if(useCurrent) {
+				nodes = this.selSetKeys_;
+			}
 			require(["controllers/StatesController"],function(StatesController){
-				if(nodes && (nodes.length > 0 || utils.objectPropertyCount(nodes) > 0)) {
+				if(nodes && nodes.length > 0) {
 					StatesController.setState(self.canvasStates_.SELECT_NONE,true);
 					StatesController.setState(self.canvasStates_.ZOOM_TO_ALL_SELECTED,true);
 					StatesController.setState(self.canvasStates_.ZOOM_TO_CURR_SELECTED,(self.selSetTraversalIdx_ !== null));
@@ -336,6 +357,22 @@ define([
 			});			
 		},
 		
+		///////////////////////
+		// updateZoomStates
+		//////////////////////
+		//
+		//
+		updateZoomStates: function() {
+			var self=this;
+			require(["views/BioTapestryCanvas"],function(BTCanvas){
+				if(self.currentModel_ && self.ArtboardModels_[self.currentModel_].nodeType_ === BTConst.NODETYPE_GROUP) {
+					BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).disableZooming();	
+				} else {
+					BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).updateZoomStates();
+				}
+			});
+		},
+		
 		///////////////////////////////////////////////
 		// _finishLoading
 		//////////////////////////////////////////////
@@ -344,25 +381,28 @@ define([
 		_finishLoading: function(params) {
 			var self=this;
 			require([this.networkModelController_],function(networkModelController){
+				var myNMC = networkModelController.getModelController(self.tabId_);
 				if(!params.floatingArtboard) {
-					networkModelController.getCurrentModel().then(function(currentModel){
+					myNMC.getCurrentModel().then(function(currentModel){
 						self._loadModel(currentModel);
 					},function(err){
-						self.set("currentModel_",err.modelId);
+						err && self.set("currentModel_",err.modelId);
 						self.asyncModelLoader_.reject(err);
 					});	
-					self.own(networkModelController.setWatch("currentModel_",function(name,oldVal,newVal){
-						self.asyncModelLoader_ = new Deferred();
-						// networkModelController.getModel(newVal).then(function(currentModel){
-						networkModelController.getCurrentModel().then(function(currentModel){
+					self.own(myNMC.setWatch("currentModel_",function(name,oldVal,newVal){
+						if(!self.asyncModelLoader_ || self.asyncModelLoader_.isFulfilled()) {
+							self.asyncModelLoader_ = new Deferred();	
+						} 
+						// myNMC.getModel(newVal).then(function(currentModel){
+						myNMC.getCurrentModel().then(function(currentModel){
 							self._loadModel(currentModel);
 						},function(err){
-							self.set("currentModel_",newVal);
+							self.set("currentModel_",oldVal);
 							self.asyncModelLoader_.reject(err);
 						});
 					}));
 				} else {
-					networkModelController.getCurrentModel().then(function(currentModel){
+					myNMC.getCurrentModel().then(function(currentModel){
 						self.setModel(currentModel.vfgParent_ || currentModel);
 					},function(err){
 						self.asyncModelLoader_.reject(err);
@@ -474,6 +514,34 @@ define([
 			this.set("toggledRegions_",regionToggles);
 		},
 		
+		///////////////////////////////////////
+		// drawingObjIsCached
+		///////////////////////////////////////
+		// 
+		// Parse the model ID given and then determine if it is currently cached by the GrnModelController
+		//
+		drawingObjIsCached: function(modelId) {
+			return !!(this.ArtboardModels_[modelId] && this.ArtboardModels_[modelId].getCached());
+		},
+		
+		//////////////////////////////////
+		// setCachedInRenderer
+		///////////////////////////////
+		//
+		// If we are invalidating the cache (cacheStatus === false), we also need the Canvas to tell the Renderer to
+		// empty its cache for these models.
+		// TODO: watch condition from the Renderer to the AbModel's cache status?
+		// 
+		setCachedInRenderer: function(modelId,cacheStatus) {
+			var self=this;
+			this.ArtboardModels_[modelId] && this.ArtboardModels_[modelId].setCached(cacheStatus);
+			if(!cacheStatus) {
+				require(["views/BioTapestryCanvas"],function(BTCanvas){
+					BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).flushRendererCache([modelId]);
+				});
+			}
+		},
+		
 		///////////////////////////////
 		// getCurrentModel
 		///////////////////////////////
@@ -503,16 +571,16 @@ define([
 			this._centerOnSel("prev");
 		},		
 		
-		selectNodesOnCanvasAndZoom: function(nodes,appendTo) {
+		selectNodesOnCanvasAndZoom: function(nodes,appendTo,focusCanvas) {
 			var self=this;
 			require(["views/BioTapestryCanvas"],function(BTCanvas){
 				self.selectNodes(nodes,appendTo).then(function(){
-					BTCanvas.zoomToSelected(self.cnvContainerDomNodeId_);
+					BTCanvas.zoomToSelected(self.cnvContainerDomNodeId_,focusCanvas);
 				});
 			});
 		},
 		
-		selectNodes: function(nodes,appendTo) {			
+		selectNodes: function(nodes,appendTo,focusCanvas) {			
 			var self=this;
 			var asyncSelector = new Deferred();
 			require(["views/BioTapestryCanvas"],function(BTCanvas){
@@ -534,7 +602,7 @@ define([
 				}
 				self.selSetKeys_ = newSelSet;
 				BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).selectNodes(nodes).then(function(){
-					self._updateStatesForSelection(nodes);
+					self.updateStatesForSelection(nodes ? Object.keys(nodes) : nodes);
 					asyncSelector.resolve();
 				});
 			});	
@@ -571,10 +639,12 @@ define([
 				for(var i in this.ArtboardModels_) {
 					if(this.ArtboardModels_.hasOwnProperty(i)) {
 						this.ArtboardModels_[i].set("expiry_",0);
+						this.setCachedInRenderer(i,false);
 					}
 				}
 			} else {
-				this.ArtboardModels_[modelId] && this.ArtboardModels_[modelId].set("expiry_",0);	
+				this.ArtboardModels_[modelId] && this.ArtboardModels_[modelId].set("expiry_",0);
+				this.setCachedInRenderer(modelId,false);
 			}
 		},
 		
@@ -611,8 +681,15 @@ define([
 		    	
 		    	var leftClickEvent = function(e){
 		    		self.asyncModelLoader_.promise.then(function(thisModel){
-		    			var hits = btCanvas.intersectByPoint(BTCanvas.translateHit({x: e.clientX, y: e.clientY},self.cnvContainerDomNodeId_));
-		    			var topHit = (hits && hits.length > 0) ? HitPriority.getTopPriorityHit(hits,null,self.get("toggledRegions_")) : null;
+		    			if(e.nodeType === BTConst.NODETYPE_GROUP) {
+		    				if(e.modelId) {
+		    					require(["controllers/ActionCollection"],function(ActionCollection){
+		    						ActionCollection.CLIENT_SET_MODEL(e);
+		    					});
+		    				}
+		    				return;
+		    			}
+		    			var topHit = (e.hits && e.hits.length > 0) ? HitPriority.getTopPriorityHit(e.hits,null,self.get("toggledRegions_")) : null;
 		    			if(topHit && topHit.getType() === "note") {
 		    				require(["views/GrnModelMessages"],function(GrnModelMsgs){
 		    					GrnModelMsgs.setMessageSticky({msg: self.getNote(topHit.id), id: topHit.id});
@@ -625,8 +702,8 @@ define([
 			    			if(topHit && topHit.getType() === "group") {
 				    			topHit = null;
 			    			}
-			    			var newSelectionMap = self._buildSelectionSet((topHit ? [topHit] : []),btCanvas.getSelectedNodes(),e.shiftKey,e.shiftKey);
-			    			if(self._compareSelections(newSelectionMap,btCanvas.getSelectedNodes())) {
+			    			var newSelectionMap = self._buildSelectionSet((topHit ? [topHit] : []),e.selectedNodes,e.shiftKey,e.shiftKey);
+			    			if(self._compareSelections(newSelectionMap,e.selectedNodes)) {
 			    				self.selectNodes(newSelectionMap);
 			    			}
 		    			}
@@ -653,24 +730,27 @@ define([
 		    	}
 		    	
 		    	// Hover-on-note message editing event
-		    	if(!params || params.attachNoteEvent) {
-		    		var callback = function(thisNote) {
+		    	if(!params || params.attachHoverEvents) {
+		    		var noteCallback = function(thisNote) {
 		    			return {id: thisNote.id, msg: self.getNote(thisNote.id)};
-		    		}
-		    		btCanvas.attachNoteEvent(callback);
+		    		};
+		    		btCanvas.attachHoverEvents(noteCallback);
 		    	}
 		    	
 		    	// Right-click callback
 		    	if(!params || params.attachRightClickEvent) {
 		    		btCanvas.attachRightClickEvent(function(e){
+		    			if(e.nodeType === BTConst.NODETYPE_GROUP) {
+		    				console.debug("[STATUS] Clicked at ",e.hits);
+		    				return;
+		    			}
 		    			require(["widgets/BTContextMenus"],function(BTContextMenus) {
 		                    // Destroy any previous context menu (it may not be correct)           			
 		        			BTContextMenus.destroyContextMenu("canvas");
 		        			self.asyncModelLoader_.promise.then(function(thisModel){
-		        				var hits = btCanvas.intersectByPoint(BTCanvas.translateHit({x: e.clientX, y: e.clientY},self.cnvContainerDomNodeId_));
-		        				var topHit = (hits && hits.length > 0) ? HitPriority.getTopPriorityHit(hits,null,self.get("toggledRegions_")) : null;
+		        				var topHit = (e.hits && e.hits.length > 0) ? HitPriority.getTopPriorityHit(e.hits,null,self.get("toggledRegions_")) : null;
 		        				if(topHit) {
-			        				BTContextMenus.buildCanvasHitContextMenu(topHit,e,self.get("overlay_"));
+			        				BTContextMenus.buildCanvasHitContextMenu(topHit,e,self.get("overlay_"),self.cnvContainerDomNodeId_,self.tabId_);
 		        				}
 		        			});
 		    			});
@@ -680,37 +760,49 @@ define([
 		    	// mousedown-drag-mouseup selection event
 		    	if(!params || params.attachDragSelectionEvent) {
 		    		btCanvas.attachDragSelectEvent(function(e){
+		    			if(e.nodeType === BTConst.NODETYPE_GROUP) {
+		    				console.debug("[STATUS] Clicked at ",e.hits);
+		    				return;
+		    			}
 			    		self.asyncModelLoader_.promise.then(function(thisModel){
-			    			var translatedStart = BTCanvas.translateHit({x: e.mouseStatus.x, y: e.mouseStatus.y},self.cnvContainerDomNodeId_);
-			    			var translatedStop = BTCanvas.translateHit({x: e.mouseStatus.endX, y: e.mouseStatus.endY},self.cnvContainerDomNodeId_);
-			    			var boundingBox = {
-			    				min_x: (translatedStart.x > translatedStop.x ? translatedStop.x : translatedStart.x),
-			    				max_x: (translatedStart.x > translatedStop.x ? translatedStart.x : translatedStop.x),
-			    				min_y: (translatedStart.y > translatedStop.y ? translatedStop.y : translatedStart.y),
-			    				max_y: (translatedStart.y > translatedStop.y ? translatedStart.y : translatedStop.y)
-			    				
-			    			};
-			    			var hits = btCanvas.intersectByBoundingBox(boundingBox);
 			    			var hitsNoRegions = [];
 			    			// Technically speaking, regions are not part of the drag selection event, so we need to strip them
 			    			// from the intersection set
-			    			DojoArray.forEach(hits,function(hit){
+			    			DojoArray.forEach(e.hits,function(hit){
 			    				if(hit.getType() !== "group") {
 			    					hitsNoRegions.push(hit);
 			    				}
 			    			});
-			    			var newSelectionMap = self._buildSelectionSet(hitsNoRegions,btCanvas.getSelectedNodes(),e.shiftKey,e.shiftKey);
-			    			if(self._compareSelections(newSelectionMap,btCanvas.getSelectedNodes())) {
+			    			var newSelectionMap = self._buildSelectionSet(hitsNoRegions,e.selectedNodes,e.shiftKey,e.shiftKey);
+			    			if(self._compareSelections(newSelectionMap,e.selectedNodes)) {
 			    				self.selectNodes(newSelectionMap);
 			    			}
 			    		});			    			
-		    		},leftClickEvent);	
+		    		});	
 		    	}
 		    	
 		    	returnArtboard.resolve(btCanvas);
 			});
 			
 			return returnArtboard.promise;
+		},
+		
+		//////////////////////////////
+		// setFullBounds
+		/////////////////////////////
+		//
+		// Special set moethod for the completeModelBounds_ object which translates server-side coordinate naming conventions to 
+		// webclient names
+		//
+		setFullBounds: function(bounds) {
+			this.completeModelBounds_ = {
+				center_x: bounds.centerX,
+				center_y: bounds.centerY,
+				min_x: bounds.minX,
+				min_y: bounds.minY,
+				max_x: bounds.maxX,
+				max_y: bounds.maxY
+			};
 		},
 		
 		//////////////////////////
@@ -724,25 +816,66 @@ define([
 			}
 			var self=this;
 			require([this.networkModelController_],function(networkModelController){
-				networkModelController.getModel(modelId).then(function(model){
+				var myNMC = networkModelController.getModelController(self.tabId_);
+				myNMC.getModel(modelId).then(function(model){
 					self._loadModel(model);
 				});
 			});
 			return this.asyncModelLoader_.promise;
 		},
 		
+		//////////////////
+		// redrawCurrent
+		//////////////////
+		//
+		//
+		redrawCurrent: function(){
+			var self=this;
+			require([this.networkModelController_],function(networkModelController){
+				var myNMC = networkModelController.getModelController(self.tabId_);
+				myNMC.getCurrentModel().then(function(currentModel){
+					self._loadModel(currentModel);
+				},function(err){
+					err && self.set("currentModel_",err.modelId);
+					self.asyncModelLoader_.reject(err);
+				});
+			});
+		},
+
+		
 		////////////////////////////////
 		// reload
 		///////////////////////////////
 		//
 		//
-		reload: function() {
+		reload: function(reserveCurrent) {
+			var self=this;
+			
 			this.selectNodes();
+			var currModel;
+			
+			if(reserveCurrent) {
+				currModel = this.ArtboardModels_[this.currentModel_];
+				delete this.ArtboardModels_[this.currentModel_];
+			}
+						
+			var models = Object.keys(this.ArtboardModels_);
+			
 			this.ArtboardModels_ = {
 				default_: new ArtboardModel({modelId_: "default_"})
-			};			
+			};
 			
-			this.currentModel_ = "default_";
+			if(currModel) {
+				this.ArtboardModels_[this.currentModel_] = currModel;
+				delete this.ArtboardModels_["_default"];
+				this.setCachedInRenderer(this.currentModel_, true);
+			} else {
+				this.currentModel_ = "default_";
+			}
+						
+			require(["views/BioTapestryCanvas"],function(BTCanvas){
+				BTCanvas.getBtCanvas(self.cnvContainerDomNodeId_).flushRendererCache(models);	
+			});
 			
 			this.asyncModelLoader_ = new Deferred();
 			this.asyncModelLoader_.id = "reload";
@@ -767,6 +900,13 @@ define([
 			this.canvasStates_ = params.canvasStates;
 			this.networkModelController_ = params.networkModelController;
 			this.delayedLoad_ = params.delayedLoad ? true : false;
+			this.navZoomMode_ = params.navZoomMode;
+			this.initialZoomMode_ = params.initialZoomMode;
+			!params.floatingArtboard && this.setFullBounds(params.completeModelBounds);
+			
+			if(params.tabId !== undefined) {
+				this.tabId_ = params.tabId;
+			}
 			
 			var self=this;
 			this.ArtboardModels_ = {
@@ -813,10 +953,10 @@ define([
 		getArtboardController: function(cnvContainerDomNodeId) {
 			return artboardControllers_[cnvContainerDomNodeId];
 		},
-		reloadArtboardController: function(cnvContainerDomNodeId) {
-			artboardControllers_[cnvContainerDomNodeId] && artboardControllers_[cnvContainerDomNodeId].reload();
+		reloadController: function(cnvContainerDomNodeId,reserveCurrentModel) {
+			artboardControllers_[cnvContainerDomNodeId] && artboardControllers_[cnvContainerDomNodeId].reload(reserveCurrentModel);
 		},
-		removeArtboardController: function(cnvContainerDomNodeId) {
+		removeController: function(cnvContainerDomNodeId) {
 			artboardControllers_[cnvContainerDomNodeId] && artboardControllers_[cnvContainerDomNodeId].destroyRecursive();
 			delete artboardControllers_[cnvContainerDomNodeId];
 		}

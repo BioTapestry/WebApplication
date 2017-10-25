@@ -146,6 +146,9 @@ define([
         },
         isSharedItem: function(shared_id) {
             return (_.has(this._shared_item_map, shared_id));
+        },
+        getType: function() {
+            return "MODEL";
         }
     };
 
@@ -193,5 +196,5 @@ define([
             modelInstance.initialize();
             return modelInstance;
         }
-    }
+    };
 });

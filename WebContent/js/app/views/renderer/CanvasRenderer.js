@@ -1,5 +1,5 @@
 /*
- **    Copyright (C) 2003-2014 Institute for Systems Biology
+ **    Copyright (C) 2003-2016 Institute for Systems Biology
  **                            Seattle, Washington, USA.
  **
  **    This library is free software; you can redistribute it and/or
@@ -21,6 +21,7 @@ define([
     "./renderer/DashedLineSupportDetector",
     "./BioTapestryConstants",
     "./Model",
+    "./GroupPanel",
     "./nodes/GroupParsers",
     "./fonts/FontUtils",
     "./renderer/RenderingContext",
@@ -30,13 +31,17 @@ define([
     "./RectangleSelectionSupport",
     "./OverlayRenderFunctions",
     "./overlay/AlphaBuilder",
+    "./overlay/OverlaySettings",
+    "./renderer/NetModuleRenderingSupport",
 
     "./renderer/NodeMoveContext"
+
 ], function (
     DashedLineSupportDetector,
 
     BioTapestryConstants,
     ModelFactory,
+    GroupPanelFactory,
     GroupParsers,
     FontUtils,
     RenderingContextFactory,
@@ -46,6 +51,8 @@ define([
     RectangleSelectionSupportFactory,
     OverlayRenderFunctions,
     NetModuleAlphaBuilder,
+    NetOverlaySettingsFactory,
+    NetModuleRenderingSupportFactory,
 
     NodeMoveContextFactory
 ) {
@@ -53,6 +60,7 @@ define([
         group_parser: GroupParsers.create({}),
 
         _createOverlayCanvas: function() {
+            // TODO use utils/DocumentUtils.createCanvasElement()
             var canvas = document.createElement('canvas');
             canvas.width = this.config.viewport_dims.width;
             canvas.height = this.config.viewport_dims.height;
@@ -61,7 +69,14 @@ define([
 
         setElementAndContext: function(newCanvas) {
             this.config.canvas_el = newCanvas;
-            this.ctx = this.config.canvas_el.getContext('2d');
+            var newContext = this.config.canvas_el.getContext('2d');
+            this.ctx = newContext;
+
+            _.each(this.model_cache, function(model) {
+                if (model.getType() == "GROUP_NODE") {
+                    model.setContext(newContext);
+                }
+            });
         },
 
         setContext: function(newContext) {
@@ -121,6 +136,13 @@ define([
             var callargs = arguments;
             _.each(this._getContextArray(), function(ctx) {
                 ctx.translate.apply(ctx, callargs);
+            });
+        },
+
+        context_drawImage: function() {
+            var callargs = arguments;
+            _.each(this._getContextArray(), function(ctx) {
+                ctx.drawImage.apply(ctx, callargs);
             });
         },
 
@@ -221,6 +243,34 @@ define([
             }
 
             this.model_cache[model_id] = model;
+            this.settings.overlay[model_id] = NetOverlaySettingsFactory.create();
+        },
+
+        ////////////////////////////////
+        // addGroupNode
+        ////////////////////////////////
+        //
+        // Adds a group node to the renderer's model cache.
+        //
+        // The group node instance has an internal reference to the current
+        // rendering context. The rendering context of the group node is
+        // initially set to be the same as the renderer's.
+        //
+        // Parameters:
+        // :model_id: Model ID.
+        //
+        // For the rest of the parameters, see documentation of GroupPanel.create factory method.
+        //
+        addGroupNode: function(model_id, click_map, node_image_uri, mask_image_uri, color_bounds_array) {
+            var group_node = GroupPanelFactory.create(click_map, node_image_uri, mask_image_uri, color_bounds_array);
+
+            if (_.has(this.model_cache, model_id)) {
+                console.warn("Model already exists with ID '" + model_id + "'");
+            }
+
+            group_node.setContext(this.ctx);
+
+            this.model_cache[model_id] = group_node;
         },
 
         removeModel: function(model_id) {
@@ -589,7 +639,23 @@ define([
             });
         },
 
-        renderModelByIDFull: function(model_key) {
+        renderModelByIDFull: function(model_key,scale) {
+            var model = this._getModelByID(model_key);
+            if (model.getType() == "MODEL") {
+                this.renderModel(model_key);
+            }
+            else if (model.getType() == "GROUP_NODE") {
+                console.log("RGN ["+scale+"]" + model_key);
+                this.renderGroupNode(model_key,scale);
+            }
+        },
+
+        renderGroupNode: function(model_key,scale) {
+            var group_node = this._getModelByID(model_key);
+            group_node.loadImagesAndRender(scale);
+        },
+
+        renderModel: function(model_key) {
             var model = this._getModelByID(model_key);
             var toggled_groups = [];
             var non_toggled_groups = [];
@@ -598,10 +664,11 @@ define([
             var rc_move_overlay;
             var nmc = this._getNodeMoveContext(model);
             var background_region_layer = model.getDrawLayerByID('BACKGROUND_REGIONS');
-
+            var overlay_alpha_settings = this._getOverlayAlphaSettings(model_key);
             this.sortBackgroundRegions(model, toggled_groups, non_toggled_groups);
 
-            rc_regions = RenderingContextFactory.create(model, this.ctx, background_region_layer, nmc, this._getOverlayAlphaSettings());
+
+            rc_regions = RenderingContextFactory.create(model, this.ctx, background_region_layer, nmc, overlay_alpha_settings);
 
             _.each(non_toggled_groups, function(group) {
                 group.render(rc_regions);
@@ -611,14 +678,14 @@ define([
             this._renderOverlayForModel(rc_model, model_key, true);
 
             // Render all drawlayers but overlay
-            rc_model = RenderingContextFactory.create(model, this.ctx, 'UNDERLAY', nmc, this._getOverlayAlphaSettings());
+            rc_model = RenderingContextFactory.create(model, this.ctx, 'UNDERLAY', nmc, overlay_alpha_settings);
             this.renderAllGroupsByDrawLayer(rc_model, model, 'UNDERLAY');
 
-            rc_model = RenderingContextFactory.create(model, this.ctx, 'VFN_GHOSTED', nmc, this._getOverlayAlphaSettings());
+            rc_model = RenderingContextFactory.create(model, this.ctx, 'VFN_GHOSTED', nmc, overlay_alpha_settings);
             this.renderAllGroupsByDrawLayer(rc_model, model, 'VFN_GHOSTED');
 
-            rc_model = RenderingContextFactory.create(model, this.ctx, 'MODEL_NODEGROUPS', nmc, this._getOverlayAlphaSettings());
-            rc_move_overlay = RenderingContextFactory.create(model, this.temp_ctx, 'MODEL_NODEGROUPS', nmc, this._getOverlayAlphaSettings());
+            rc_model = RenderingContextFactory.create(model, this.ctx, 'MODEL_NODEGROUPS', nmc, overlay_alpha_settings);
+            rc_move_overlay = RenderingContextFactory.create(model, this.temp_ctx, 'MODEL_NODEGROUPS', nmc, overlay_alpha_settings);
 
             this._clearContextParam(this.temp_ctx);
             this.renderAllGroupsByDrawLayerWithNodeDrag(rc_model, rc_move_overlay, model, 'MODEL_NODEGROUPS');
@@ -657,47 +724,42 @@ define([
             return model.getOverlay(overlay_id);
         },
 
+        _getOverlaySettingsForModel: function(model_id) {
+            return this.settings.overlay[model_id];
+        },
+
         _getOverlayForModel: function(model, overlay_id) {
             return model.getOverlay(overlay_id);
         },
 
         _renderOverlayForModel: function(rendering_context, model_key, do_underlay) {
-            var overlay_id = this.settings.overlay.id,
+            var overlay_settings = this._getOverlaySettingsForModel(model_key),
                 overlay,
                 model = this._getModelByID(model_key);
 
-            if (overlay_id === null) {
+            if (!overlay_settings.isEnabled()) {
                 return;
             }
 
-            overlay = model.getOverlay(overlay_id);
+            overlay = model.getOverlay(overlay_settings.getEnabledID());
 
-            if (do_underlay == true) {
-                this.overlaySupport.underlayRenderIfEnabled(model, overlay, this._getOverlayAlphaSettings());
-            }
-            else {
-                this.overlaySupport.overlayRender(model, overlay, this._getOverlayAlphaSettings());
-            }
+            this.overlaySupport.overlayRender(model, overlay, overlay_settings, do_underlay);
         },
 
-        toggleOverlay: function(overlay_config) {
+        toggleOverlay: function(model_id, overlay_config) {
+            var overlay_settings = this._getOverlaySettingsForModel(model_id);
+
             if (overlay_config === null) {
                 return;
             }
 
-            // TODO
-            // add validation of overlay_config
-            if (overlay_config.id == null) {
-                this.settings.overlay = {
-                    "id": null
-                }
+            // TODO add validation of overlay_config
+            overlay_settings.setEnabledID(overlay_config.id);
+            if (_.has(overlay_config, "enabled_modules")) {
+                overlay_settings.setEnabledModules(overlay_config["enabled_modules"]);
             }
             else {
-                this.settings.overlay = overlay_config;
-
-                if (!_.has(overlay_config, "enabled_modules")) {
-                    this.settings.overlay.enabled_modules = [];
-                }
+                overlay_settings.setEnabledModules([]);
             }
         },
 
@@ -712,9 +774,11 @@ define([
             model.setEnabledGroups(enabled_groups);
         },
 
-        setOverlayIntensity: function(intensity) {
+        setOverlayIntensity: function(model_key, intensity) {
+            var overlay_settings = this._getOverlaySettingsForModel(model_key);
+
             if (0.0 <= intensity <= 1.0) {
-                NetModuleAlphaBuilder.alphaCalc(100.0 * intensity, this._getOverlayAlphaSettings());
+                NetModuleAlphaBuilder.alphaCalc(100.0 * intensity, overlay_settings.getAlphaSettings());
             }
             else {
                 throw {
@@ -727,8 +791,8 @@ define([
             }
         },
 
-        _getOverlayAlphaSettings: function() {
-            return this.settings.overlay_alpha;
+        _getOverlayAlphaSettings: function(model_key) {
+            return this._getOverlaySettingsForModel(model_key).getAlphaSettings();
         },
 
         switchBoundsDebug: function() {
@@ -805,12 +869,12 @@ define([
 
         _doRectangleSelection: function(selection_rect, model_key) {
             var model = this._getModelByID(model_key);
+            var overlay_settings = this._getOverlaySettingsForModel(model_key);
 
             return this.rectangle_selection_support.doRectangleSelection(
                 selection_rect,
                 model,
-                this.settings.overlay,
-                this._getOverlayAlphaSettings());
+                overlay_settings);
         },
 
         _doPointSelectionFromCanvas: function(canvas_point, model_key) {
@@ -821,16 +885,41 @@ define([
 
         _doPointSelection: function(point, model_key) {
             var model = this._getModelByID(model_key);
-            var rc_for_module_masks = RenderingContextFactory.create(model, this.temp_ctx, {});
+            var overlay_settings = this._getOverlaySettingsForModel(model_key);
 
             return this.intersections._pointIntersectModel(
                 point,
                 model,
-                this.settings.overlay,
-                this._getOverlayAlphaSettings(),
+                overlay_settings);
+        },
 
-                // TODO remove from here and from function definition
-                rc_for_module_masks);
+        _getGroupNodeClickId: function(point, model_key) {
+            var group_node = this._getModelByID(model_key);
+
+            var node_id = group_node.getNodeIdForPoint(point.x, point.y);
+            return node_id;
+        },
+
+        //////////////////////////////////////////////////////////////
+        // _enableGroupNodeRegionHighlightWithPoint
+        //////////////////////////////////////////////////////////////
+        //
+        // See documentation of GroupPanel.enableMaskRenderingWithPoint
+        //
+        _enableGroupNodeRegionHighlightWithPoint: function(point, model_key) {
+            var group_node = this._getModelByID(model_key);
+            group_node.enableMaskRenderingWithPoint(point);
+        },
+
+        //////////////////////////////////////////////////////////////
+        // _disableGroupNodeRegionHighlight
+        //////////////////////////////////////////////////////////////
+        //
+        // See documentation of GroupPanel.disableMaskRendering
+        //
+        _disableGroupNodeRegionHighlight: function(model_key) {
+            var group_node = this._getModelByID(model_key);
+            group_node.disableMaskRendering();
         },
 
         ///////////////////////////////
@@ -857,9 +946,7 @@ define([
             NetModuleAlphaBuilder.alphaCalc(100.0, overlayAlphaSettings);
 
             obj.settings = {
-                overlay: {
-                    id: null
-                },
+                overlay: { },
                 overlay_alpha: overlayAlphaSettings,
                 pads: {
                     enable: false
@@ -870,9 +957,6 @@ define([
                     translate: null
                 }
             };
-
-            obj.group_array = [];
-            obj.group_id_to_index_map = { };
 
             obj.selected_nodes_map = { };
 

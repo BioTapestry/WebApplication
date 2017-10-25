@@ -28,7 +28,8 @@ define([
         			id: e.params.id,
         			cmdKey: e.params.cmdkey,
         			cmdClass: e.params.cmdclass,
-        			name: e.params.name,
+        			currentTab: e.params.tab,
+        			name: ((e.params.name && e.params.name.indexOf("%") >= 0) ? decodeURIComponent(e.params.name) : e.params.name),
         			linkUri: e.params.linkuri,
         			segId: e.params.segid
     			});
@@ -38,8 +39,8 @@ define([
 		// It's possible this experimental data module was loaded as part of a window
 		// to allow separate display of the data. If this is the case, we need to
 		// launch the ExpData modules from here
-		var nodeHandler = router.register("/expd/:cmdclass/:cmdkey/:id/:name",loadExpData);
-		var linkHandler = router.register("/expd/:cmdclass/:cmdkey/:id/:segid/:linkuri",loadExpData);
+		var nodeHandler = router.register("/expd/:cmdclass/:cmdkey/:id/:tab/:name",loadExpData);
+		var linkHandler = router.register("/expd/:cmdclass/:cmdkey/:id/:tab/:segid/:linkuri",loadExpData);
 		
 		router.startup();
 				

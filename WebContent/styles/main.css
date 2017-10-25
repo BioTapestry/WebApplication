@@ -54,14 +54,64 @@ html, body {
     display: block;
 }
 
-#CanvasLoading {
-	position: absolute;
-	z-index: 1001;
+.ModelDownloadText {
+	font-family: "Footlight MT Light",Verdana,sans serif;
+	font-size: 20px;
+	color: black;
+	padding-left: 10px;
+	margin: 3px 0px 10px 0px;
 	display: block;
+}
+
+#ModelDownloading {
+	position: absolute;
+	z-index: 9001;
+	background-color: #FFFFFF;
+	box-shadow: 0px 0px 20px #3A5F99;
+	display: block;
+	width: 94%;
+	height: 94%;
+	margin: 0 auto;
+	top: 3%;
+	left: 3%;
+}
+
+#ModelDownloading p {
+	border: 5px solid green;
+	width: 30%;
+	height: 30%;
+	top: 35%;
+	left: 35%;
+	position: absolute;
+	margin: 0 auto;
+	background: #fff url('../js/lib/dijit/themes/biotapestry/images/loadingAnimation.gif') no-repeat 2% 95%;
+}
+
+
+#TabLoadingText {
+	width: 130px;
+	height: auto;
+	background: #fff url('../js/lib/dijit/themes/biotapestry/images/loadingAnimation.gif') no-repeat 98% 1%;
+}
+
+#TabLoadingText span {
+	padding-left: 10px;
+	font-family: Helevetica,Verdana,sans serif;
+	font-size: 15px;
+}
+
+#CanvasLoadText {
 	font-family: "Footlight MT Light",Verdana,sans serif;
 	background-color: #C4C4CF;
 	font-size: 30px;
 	color: black;
+	padding: 10px;
+}
+
+#CanvasLoading {
+	position: absolute;
+	z-index: 1001;
+	display: block;
 }
 
 #CanvasLoading p {
@@ -131,6 +181,31 @@ html, body {
 	height: 100%;
 	width: 100%;
 }
+
+#tab_container>.dijitTabPaneWrapper {
+	padding: 0px;
+	background-color: rgba(196, 209, 228, 1);
+}
+
+#tab_container .dijitTabContainerTop-tabs .dijitTab {
+  padding-bottom: 2px;
+  padding-top: 4px;	
+}
+
+#tab_container .dijitTabContainerTop-tabs .dijitTabChecked {
+  /* selected tab */
+  padding-bottom: 3px;
+  padding-top: 6px;
+  background-image: url("images/tabTopSelected.png");
+  background-image: -moz-linear-gradient(top, #ffffff 0px, #ffffff 1px, rgba(255, 255, 255, 0) 2px, rgba(196, 209, 228, 1) 7px);
+  background-image: -webkit-linear-gradient(top, #ffffff 0px, #ffffff 1px, rgba(255, 255, 255, 0) 2px, rgba(196, 209, 228, 1) 7px);
+  background-image: -o-linear-gradient(top, #ffffff 0px, #ffffff 1px, rgba(255, 255, 255, 0) 2px, rgba(196, 209, 228, 1) 7px);
+  background-image: linear-gradient(top, #ffffff 0px, #ffffff 1px, rgba(255, 255, 255, 0) 2px, rgba(196, 209, 228, 1) 7px);
+  -webkit-box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.05);
+  -moz-box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.05);
+}
+
 
 /* Footer */
 #footer_pane {
@@ -203,62 +278,73 @@ html, body {
 
 /* TimeSlider */
 
-#slider_pane {
-	border-width: 1px 0px 0px 0px;
-	border-style: solid;
-	padding: 0;
-	margin: 0;
+.TimeSliderPane {
+	border-width: 1px 0px 0px 0px !important;
+	border-style: solid !important;
+	padding: 0px !important;
+	margin: 0px !important;
 	height: 75px;
 	background-color: #FFFFFF !important;
 }
 
 /* Overlay */
-#annotimg_pane {
+.AnnotImgPane {
 	height: 215px;
-	padding: 0; 
-	margin: 0;
+	padding: 0 !important; 
+	margin: 0 !important;
 	background-color: #FFFFFF !important;
-	border-width: 1px 0px 0px 0px;
-	border-style: solid;
+	border-width: 1px 0px 0px 0px !important;
+	border-style: solid !important;
 }
 
-
-#intensity_slider_pane {
-	border: 0;
-	padding: 5px 5px 1px 5px;
-	margin: 0;
-	height: 35px;
+.IntensitySliderPane {
+	border: 0 !important;
+	padding: 5px 5px 1px 5px !important;
+	margin: 0 !important;
+	height: 35px !important;
 	background-color: #FFFFFF !important;	
 }
 
-#overlay_pane {
+.OverlayWidgetPane {
 	height: 205px;
-	padding: 0; 
-	margin: 0;
+	padding: 0px !important; 
+	margin: 0px !important;
 	background-color: #FFFFFF !important;
-	border-width: 1px 0px 1px 0px;
-	border-style: solid;
+	border-width: 1px 0px 1px 0px !important;
+	border-style: solid !important;
 }
 
-#overlay_select_pane {
-	padding: 5px 5px 2px 5px;
+.OverlaySelexPane {
+	padding: 5px 5px 2px 5px !important;
 }
 
 /* Overlay Modules Checkbox Panes */
 
-#overlay_buttons_pane {
-	padding: 0px 2px 2px 2px;
+.OverlayBtnsPane {
+	padding: 0px 0px 0px 0px !important;
+	margin: 0px -2px 0px -2px !important;
 }
 
-#modules_pane {
-	padding: 2px 5px 2px 5px;
+.OverlaySelect {
+	width: 175px !important;
 }
 
-#module_checkboxes_pane_empty {
-	border: 1px solid black;
+.OverlayModulesPane {
+	padding: 2px 5px 2px 5px !important;
+}
+
+.OverlayCheckBoxPaneEmpty {
+	border: 1px solid black !important;
 	background-color: #FFFFFF !important;
-	height: 70px;
-	padding: 2px;
+	height: 70px !important;
+	padding: 2px !important;
+}
+
+.OverlayCheckBoxHolder {
+	border: 0px !important;
+	margin: 0px !important;
+	background-color: #FFFFFF !important;
+	padding: 0px !important;	
 }
 
 .ModuleCheckboxesPane {
@@ -280,45 +366,45 @@ html, body {
 
 /* Overlay component labels */
 
-#intensity_slider_label,#overlay_selection_label {
+.OverlayLabel {
 	float: left; 
-	margin-right: 15px; 
+	margin-right: 10px !important; 
 	font-weight: bold;	
 }
 
-#overlay_selection_label {
+.OverlaySelexLabel {
 	padding-top: 3px;
 }
 
 /* Left container */
-#left_wrapper {
+.LeftWrapper {
 	width: 270px;
-	border: 2px solid #4b5a8a;
-	padding: 0px; 
-	margin: 0px; 
-	overflow: hidden;
+	border: 2px solid #4b5a8a !important;
+	padding: 0px !important; 
+	margin: 0px !important;
 }
 
-#left_lower_wrapper {
-	overflow: hidden;
-	background-color: #FFFFFF; 
-	padding: 0; 
-	margin: 0;
+.LeftLowerWrapper {
+	background-color: #FFFFFF !important; 
+	padding: 0px !important; 
+	margin: 0px !important;
 }
 
-#left_upper_component {
+.LeftUpperComponent {
 	background: #FFFFFF;
-	padding: 0px;
+	padding: 0px !important;
+	border: 0px !important;
+	height: 200px;
 }
 
-/* grnWrapper is where all Canvas events are bound */
-#grnWrapper {
-	overflow: hidden;
-	white-space: nowrap;
-	border: 2px solid #4b5a8a;
-	background-color: #cccccc;
-	padding: 0px;
-	margin: 0px;
+/* GrnWrapper-classed DIVs is where all Canvas events are bound */
+.GrnWrapper {
+	overflow: hidden !important;
+	white-space: nowrap !important;
+	border: 2px solid #4b5a8a !important;
+	background-color: #cccccc !important;
+	padding: 0px !important;
+	margin: 0px !important;
 }
 
 /* A container for the canvas element, used in the virtual scrolling system */
@@ -382,13 +468,11 @@ canvas {
 /* Dialogs and Frames */
 
 .BTCheckBox {
-	float: left;
-	padding-top: 5px !important;
+	margin-top: -3px !important;
 }
 
 .BTCheckBoxLabel {
-	display: block;
-	margin-left: 20px;
+	margin: 0px 5px 0px 5px;
 }
 
 .BTCheckBoxContainer {
@@ -396,23 +480,32 @@ canvas {
 	margin: 0px 0px 5px 0px;
 }
 
-.SelGroupContainer {
-	padding: 10px 0px 15px 0px;
+div.BTSelGroup div.dijitRadio {
+	margin-top: -2px !important;
 }
 
-.SelGroupLabel {
+div.BTSelGroup.Justified div.dijitRadio {
+	padding-top: 9px !important;
+}
+
+div.BTSelGroup.Justified div.dijitRadio {
+	clear: left !important;
+    float: left !important;
+}
+
+.BTSelGroupLabel {
 	padding-right: 10px;
+	margin: 3px 3px 8px -3px;
 }
 
-.SelGroupRadioContainer {
-	margin: 0px;
-	padding: 2px 0px 0px 15px;
-}
-
-.SelGroupRadioLabel {
+.BTSelGroupRadioLabel {
 	padding-right: 15px;
 	padding-left: 5px;
-	white-space: nowrap;
+	width: 90%;
+}
+
+div.BTSelGroup.Justified .BTSelGroupRadioLabel {
+	float: left;
 }
 
 .TextMessage {
@@ -447,11 +540,11 @@ canvas {
 
 /* Make sure labels have some space */
 label.left {
-	margin-right: 10px;
+	margin-right: 6px;
 }
 
 label.right {
-	margin-left: 10px;
+	margin-left: 6px;
 }
 
 .dijitTabPaneWrapper {
@@ -504,13 +597,15 @@ label.right {
 
 
 /**
-// OSX Lion can be set to autohide scrollbars between scroll uses at the system level.
-// Some browsers ignore this, but Webkit browsers do not. If a user is on a system
-// without a hardware scrolling option, they may lose the ability to scroll the 
-// canvas, because it is a virtually scrolled element. We solve this by checking for
-// Mac + Webkit, and then applying a special CSS class that disables the normal webkit
-// scrollbars (to prevent them from showing up when autohide is disabled, or when they
-// would normally) and then skin our own, which we force to always be visible.
+// OSX Lion+ can be set to autohide scrollbars between scroll uses at the system level.
+// Most browsers now abide by this behavior. This presents a problem for our Canvas because 
+// the elements actually generating the scrollbars (hidden DIVs) are not the element being 
+// scrolled (the Canvas). We solve this in Webkit browsers by checking for OSX, and then 
+// applying a special CSS class that disables the normal scrollbars (to prevent them from 
+// showing up when autohide is disabled, or when they would normally) and then skin our own, 
+// which we force to always be visible.
+// 
+// There is currently no solution available for Firefox which does not rely on Js.
  */
 
 .osxScroll::-webkit-scrollbar {
@@ -599,6 +694,14 @@ label.right {
 	position: absolute;
 }
 
+.DisablingPicker {
+	width: 100%; 
+	height: 100%;
+	z-index: 951; 
+	background-color: rgba(255,255,255,0.50); 
+	position: absolute;	
+}
+
 /**
  * Background position overrides to produce a dijit.form.CheckBox which is skinned
  * like a dijit.form.RadioButton but otherwise behaves exactly like a CheckBox. To
@@ -620,6 +723,74 @@ label.right {
 	background-position: -120px !important;
 }
 
+table.keyBinds {
+	border-collapse: collapse;
+	margin-bottom: 10px;
+	min-width: 325px;
+}
+
+table.keyBinds th {
+	background: #acc2e5;
+	font-weight: normal;
+	padding: 0px 5px 0px 5px;
+}
+
+table.keyBinds, table.keyBinds td, table.keyBinds th {
+	border: 2px solid #000000;
+}
+
+table.keyBinds th, table.keyBinds td {
+	text-align: left;
+}
+
+table.keyBinds td {
+	height: 50px;
+	padding: 0px 5px 0px 5px;
+}
+
+table.keyBinds td>img {
+	vertical-align: middle;
+}
+
+.keyBindTitle {
+	margin: 5px 0px 10px 2px;
+	font-weight: bold;
+}
+
+.key {
+	padding: 4px;
+	background-color: #D1D1D1;
+	border: 1px solid black;
+	font: Verdana,Lucida Console,Courier,Courier New;
+	border-radius: 4px 4px 4px 4px;
+	-moz-border-radius: 4px 4px 4px 4px;
+	-webkit-border-radius: 4px 4px 4px 4px;
+}
+
+.keymapPadded {
+	padding-top: 10px;
+}
+
+.mouseButton {
+	padding: 2px 2px 2px 0px;
+}
+
+.drawingKeys {
+	background:  #FFFFFF url('../images/drawingKeys.png') no-repeat top right;
+}
+
+.menuKeys {
+	background:  #FFFFFF url('../images/menuKeys.png') no-repeat top right;
+}
+
+.menuKeysViewer {
+	background:  #FFFFFF url('../images/menuKeysViewer.png') no-repeat top right;
+}
+
+.modeltreeKeys {
+	background:  #FFFFFF url('../images/modeltreeKeys.png') no-repeat top right;
+	min-height: 400px;
+}
 
 /**
  * This is only needed if we have an element which uses the right-hand edge of
@@ -633,3 +804,108 @@ label.right {
 }
 
 */
+
+.ExpDataTable {
+	border-collapse: collapse;
+	font-family: Verdana,Helevetica,sans serif;
+}
+
+table.ExpDataTable {
+	border: 2px solid #353535;
+	width: 100%;
+	font-size: 11pt;
+}
+
+.ExpDataTable th, .ExpDataTable td {
+	border: 2px solid #353535;
+	padding: 10px;
+}
+
+.ExpDataTable th {
+	background-color: #96BFE8;
+}
+
+label.Justified {
+	display: block;
+	padding-bottom: 5px;
+}
+
+.BTComboBoxDropDown .BTComboBoxSelected, .BTComboBoxDropDown .dijitMenuItemSelected {
+	font-weight: bold !important;
+}
+
+.BTColorComboBox input.dijitInputInner {
+	width: 80% !important;
+	float: left !important;
+}
+
+.BTComboColorChooserSwatch {
+	border: 1px solid black;
+	width: 20px;
+	height: 100%;
+	float: left;
+	margin-right: 8px;
+}
+
+.FontOverrideSize {
+	width: 100px !important;
+}
+
+.FontOverride+label {
+	margin-right: 20px !important;
+}
+
+.BTCheckBox.FloatingElement:not(:first-child) {
+	margin-left: 10px !important;
+}
+
+.BTComboBox.FloatingElement:not(:last-child) {
+	margin-right: 10px !important;
+}
+
+.MiniCombo {
+	width: 50px !important;
+}
+
+.cp-indicators {
+	border: 0 !important;
+	padding: 10px 0px 0px 0px !important;
+}
+
+.cp-indicators>*:first-child {
+	margin-bottom: 5px;
+}
+
+.cp-indicator {
+	margin: -3px 5px 0px 3px !important;
+}
+
+.cp-indicator-wrapper {
+	padding: 8px 0px 12px 0px !important;
+}
+
+.cp-indicator-label {
+	display: inline-block;
+	
+}
+
+.cp-indicator-long {
+	width: 100px !important;
+}
+
+.cp-indicator-short {
+	width: 55px !important;
+}
+
+.cp-container {
+	width: 275px;
+	border: 0 !important;
+	padding: 0 !important;
+}
+
+#btColorPickerSwatch {
+	width: 40px;
+	height: 40px;
+	border: 1px solid black;
+	clear: right;
+}

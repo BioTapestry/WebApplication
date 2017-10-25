@@ -73,6 +73,14 @@ define([
 		_HAS_MODULEGetter: function() {
 			return this.HAS_MODULE;
 		},
+		
+		isInteractive: null,
+		_isInteractiveSetter: function(val) {
+			this.isInteractive = val;
+		},
+		_isInteractiveGetter: function() {
+			return this.isInteractive;
+		},
 				
 		clear: function(condition) {
 			this.set(condition,null);

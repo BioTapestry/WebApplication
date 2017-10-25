@@ -43,8 +43,11 @@ define([
     		 networkModelController,
     		 PathingView
 		 ){
-			networkModelController.set("postBuildLoadElements_",postBuildLoadElements);
-			networkModelController.setModel(args).then(function(){
+			var myNMC = networkModelController.getModelController();
+			(args.canvasId !== null && args.canvasId !== undefined) && myNMC.set("cnvContainerDomNodeId_",args.canvasId);
+			
+			myNMC.set("postBuildLoadElements_",postBuildLoadElements);
+			myNMC.setModel(args).then(function(){
 				require(["models/conditions/ElementConditions"],function(ElementConditions){
 					if(!ElementConditions.get("havePath")) {
 						ElementConditions.set("havePath",true);
@@ -54,7 +57,7 @@ define([
 				if(args.pathInit) {
 					PathingView.finishLoad(layoutFrame || dialog);
 				}
-				networkModelController.setTitle(args.pathSrc,args.pathTrg);
+				myNMC.setTitle(args.pathSrc,args.pathTrg);
 			},function(err){
 				if(!err.havePath) {
 					require(["models/conditions/ElementConditions"],function(ElementConditions){
@@ -65,7 +68,7 @@ define([
 				if(args.pathInit) {
 					PathingView.finishLoad(layoutFrame || dialog);
 				}
-				networkModelController.setTitle();
+				myNMC.setTitle();
 			});
 		});
 	};

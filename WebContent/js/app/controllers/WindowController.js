@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -36,7 +36,7 @@ define([
 	// To get around this, we check for the Trident engine, and immediately revert to dialogs.
 	var isTrident = sniff("trident");
 		
-	on(window,"message",function(e){
+	var messageHandler = on(window,"message",function(e){
 		if(window.location.origin !== e.origin) {
 			throw new Error("[ERROR] Origin mismatch in message! This might be an attack!");
 		} else {
@@ -74,6 +74,11 @@ define([
 	var colCount = 0;
 	var rowCount = 0;
 	
+	//////////////////
+	// _closeWindow
+	/////////////////
+	//
+	//
 	function _closeWindow(id) {
 		if(windows_[id] && windows_[id].window) {
 			if(windows_[id].isDialog) {
@@ -94,8 +99,13 @@ define([
 				l: 100
 			};
 		}
-	}
+	};
 	
+	////////////////////////
+	// buildWindowParams_
+	////////////////////////
+	//
+	//
 	function buildWindowParams_(dimensions) {
 		if(dimensions) {
 			return "height=" + dimensions.h 
@@ -113,6 +123,11 @@ define([
 		return {x: lastLoadedPosition_.l,y: lastLoadedPosition_.t};
 	};
 	
+	///////////////////////////
+	// calcNextLoadPositions_
+	///////////////////////////
+	//
+	//
 	function calcNextLoadPositions_() {
 		if(lastLoadedPosition_.l+20 > (userScreen.w-defaultWindowDimensions_.w)) {
 			rowCount++;
@@ -130,7 +145,6 @@ define([
 		}		
 	};
 		
-	
 	//////////////////////////////////////////
 	// loadWindow_
 	/////////////////////////////////////////
@@ -174,6 +188,11 @@ define([
 		return load.promise;
 	};
 	
+	////////////////////////
+	// loadWindowAsDialog_
+	////////////////////////
+	//
+	//
 	function loadWindowAsDialog_(id,uri,title,type,windowCtrl) {
 		var load = new Deferred();
 		if(!isTrident && (id.indexOf("expdata") < 0)) {
@@ -219,6 +238,11 @@ define([
 		
 	return {
 				
+		////////////////
+		// openWindow
+		///////////////
+		//
+		//
 		openWindow: function(params) {
 			var self=this;
 			frameController = params.controllerName;
@@ -244,10 +268,21 @@ define([
 			return loadAsync.promise;
 		},
 		
+		/////////////////
+		// closeWindow
+		////////////////
+		//
+		//
 		closeWindow: function(id) {
 			_closeWindow(id);
 		},
 		
+		
+		/////////////////////
+		// sendCmdToWindow
+		/////////////////////
+		//
+		//
 		sendCmdToWindow: function(id,cmd,args) {
 			if(windows_[id] && windows_[id].window) {
 				if(!args) {

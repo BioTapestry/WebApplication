@@ -24,40 +24,44 @@
 //
 
 define([
+	"app/utils",
+	"static/ErrorMessages",
     "dojo/request",
 	"dojo/Deferred",
 	"dijit/layout/BorderContainer",
 	"dijit/layout/ContentPane",
 	"dojo/on",
     "dojo/dom",  
-	"app/utils",
 	"dojo/_base/array",
 	"dojo/domReady!"
 ],function(
+	utils,
+	ErrMsgs,
 	request,
 	Deferred,
 	BorderContainer,
 	ContentPane,
 	on,
 	dom,
-	utils,
 	DojoArray
 ) {
-	
-	var CANVAS_CONTAINER_NODE_ID = "path";
-	var CANVAS_WRAPPER_NODE_ID = "pathWrapper";
-	
+		
 	// This will be the primary container of our application.
 	var pathingPane = new BorderContainer({
 		id: "pathing_container"
 	});
-	    	
 	
 	var loadAsync = null;
 	
 	var loadScreen = null;
 	
-	return {	
+	return {
+		
+		////////////////
+		// loadView
+		///////////////
+		//
+		//
 		loadView: function(loadingOverlay) {
 			
 			loadScreen = loadingOverlay;
@@ -67,7 +71,7 @@ define([
 
 		        on(window,"message",function(e){
 		    		if(window.location.origin !== e.origin) {
-		    			throw new Error("[ERROR] Origin mismatch in message! This might be an attack!");
+		    			throw new Error(ErrMsgs.originMismatch);
 		    		} else {		        	
 			        	require(["controllers/pathing/PathingController"],function(BioTapPathController){
 			        		BioTapPathController[e.data.cmd](e.data.args,e.source);
@@ -79,14 +83,12 @@ define([
 			}
 			return loadAsync.promise;
 		},
-		getAppCanvasContainerNodeId: function() {
-			return CANVAS_CONTAINER_NODE_ID;
-		},
-		
-		getAppCanvasWrapperNodeId: function() {
-			return CANVAS_WRAPPER_NODE_ID;
-		},
-		
+
+		///////////////////
+		// finishLoad
+		///////////////////
+		//
+		//
 		finishLoad: function(builtFrame) {
 			if(builtFrame.type !== "PATH_DISPLAY") {
 				builtFrame.region = "center";
@@ -108,14 +110,9 @@ define([
 				pathingPane.startup();
 				builtFrame.emit("built",{bubbles: true, cancelable: true});
 			} else {
-				var deferred = builtFrame.show();
-				if(deferred) {
-					deferred.then(function(){
-						builtFrame.emit("built",{bubbles: true, cancelable: true});
-					});
-				} else {
+				builtFrame.show().then(function(){
 					builtFrame.emit("built",{bubbles: true, cancelable: true});
-				}
+				});
 			}
 
 			if(loadScreen) {

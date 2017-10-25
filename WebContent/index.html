@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/BioTapestryIcons.css">
     <link rel="stylesheet" href="js/lib/dijit/themes/biotapestry/biotapestry.css" />
+    <link rel="stylesheet" href="styles/flexicolorpicker.css" />
     
     <!-- CUSTOMIZE YOUR WINDOW/TAB TITLE HERE -->
     <title>BioTapestry Web Viewer</title>
@@ -66,10 +67,15 @@
     	};
     	
     	if(!console.debug) {
-    		console.debug = function(msg){console.log(msg)};
+    		console.debug = function(msg){
+    			for(var i=0; i < arguments.length; i++) {
+   					console.log(arguments[i]);
+   				}
+   			};
     	}
 	</script>
 	<script src="js/lib/utils/underscore.js"></script>
+	<script src="js/lib/utils/flexi-colorpicker.js"></script>
     <script src="js/lib/dojo/dojo.js"></script>
     <script src="js/app/start.js"></script>
     

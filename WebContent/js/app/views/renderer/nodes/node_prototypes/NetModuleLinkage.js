@@ -140,14 +140,14 @@ define([
     // This function is used in browsers that support either setLineDash or mozDash
     // in their Canvas implementation.
     //
-    var renderSegmentsUsingCanvas = function(rendering_context, alpha, enabled_modules_map, intersection) {
+    var renderSegmentsUsingCanvas = function(rendering_context, alpha, module_support, intersection) {
         // If the source module is not enabled in the overlay, none of the linkages will be draw
-        if (!_.has(enabled_modules_map, this.source_module_id)) {
+        if (!module_support.isEnabledNetModule(this.source_module_id)) {
             return;
         }
 
         _.each(this.segments, function (segment) {
-            if (! this.isSegmentVisible(segment, enabled_modules_map)) {
+            if (! this.isSegmentVisible(segment, module_support)) {
                 return;
             }
 
@@ -168,9 +168,9 @@ define([
     // Any segments that do not use the dashed or dotted line style are rendered using
     // renderSingleSegmentUsingCanvas.
     //
-    var renderSegmentsUsingBitmapPattern = function(rendering_context, alpha, enabled_modules_map, intersection) {
+    var renderSegmentsUsingBitmapPattern = function(rendering_context, alpha, module_support, intersection) {
         // If the source module is not enabled in the overlay, none of the linkages will be draw
-        if (!_.has(enabled_modules_map, this.source_module_id)) {
+        if (!module_support.isEnabledNetModule(this.source_module_id)) {
             return;
         }
 
@@ -201,7 +201,7 @@ define([
             var pattern_ctx = pattern_canvas.getContext("2d");
             var pattern = pattern_ctx.createPattern(pattern_canvas, "repeat");
 
-            if (! this.isSegmentVisible(segment, enabled_modules_map)) {
+            if (! this.isSegmentVisible(segment, module_support)) {
                 return;
             }
 
@@ -255,8 +255,8 @@ define([
     var NetModuleLinkageNodeRendererPrototype = {
         _type: "net_module_linkage",
         default_font: "LINK_LABEL",
-        render: function(rendering_context, alpha, enabled_modules_map, intersection) {
-            this.renderSegments(rendering_context, alpha, enabled_modules_map, intersection);
+        render: function(rendering_context, alpha, module_support, intersection) {
+            this.renderSegments(rendering_context, alpha, module_support, intersection);
         },
         ////////////////////////////////
         // renderSegments
@@ -309,7 +309,7 @@ define([
         // Answers if a NetModuleLinkage segment should be drawn,
         // given the enabled modules of an overlay.
         //
-        isSegmentVisible: function(segment, enabled_modules_map) {
+        isSegmentVisible: function(segment, module_support) {
             var source_module_id;
             var target_module_id;
 
@@ -319,7 +319,7 @@ define([
                 source_module_id = this.linkages[linkid].srcmodule;
                 target_module_id = this.linkages[linkid].trgmodule;
 
-                return (_.has(enabled_modules_map, source_module_id) && _.has(enabled_modules_map, target_module_id));
+                return (module_support.isEnabledNetModule(source_module_id) && module_support.isEnabledNetModule(target_module_id));
             }, this);
 
             return (link !== undefined);

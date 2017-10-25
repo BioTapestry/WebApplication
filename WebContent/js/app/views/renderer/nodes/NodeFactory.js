@@ -122,6 +122,18 @@ define([
         },
         getOverlayType: function() {
             return this.ovrtype;
+        },
+        getModuleNodes: function() {
+            return this.modules;
+        },
+        getModuleNodeByID: function(module_id) {
+            return this.module_map[module_id];
+        },
+        getGroupRectangles: function() {
+            return this.group_rects;
+        },
+        getLinkages: function() {
+            return this.linkages;
         }
     });
 

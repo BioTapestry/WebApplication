@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -31,6 +31,8 @@ define([],function(){
 	
 	var BASE_LOCATION = window.location.href;
 	
+	// If this was opened in an iframe, we need to trim the location href for opening experimental
+	// data or pathing windows
 	if(window.location.href.indexOf("?")>= 0) {
 		BASE_LOCATION = window.location.href.substring(0,window.location.href.indexOf("?")+"/");
 	}
@@ -40,8 +42,30 @@ define([],function(){
 	return {	
 		init: servletBase_ + "init",
 		
-		modelannotimg: servletBase_ + "modelannotimage&model=",
-		
+		modelannotimg: function(model,tab) {
+			var uri = servletBase_ + "modelannotimage&modelID="+model;
+			if(tab !== undefined && tab !== null) {
+				uri+="&currentTab="+tab;
+			}
+			return uri;
+		},
+
+		groupnodeimg: function(node,tab) {
+			var uri = servletBase_ + "groupnodeimage&type=image&nodeID="+node;
+			if(tab !== undefined && tab !== null) {
+				uri+="&currentTab="+tab;
+			}
+			return uri;
+		},
+
+		groupnodemap: function(node,tab) {
+			var uri = servletBase_ + "groupnodeimage&type=map&nodeID="+node;
+			if(tab !== undefined && tab !== null) {
+				uri+="&currentTab="+tab;
+			}
+			return uri;
+		},
+
 		disableSessionEpiry: servletBase_ + "disablesessionexpiry",
 		
 		setSessionEpiry: function(expiry) {
@@ -56,9 +80,15 @@ define([],function(){
 		
 		menubar: servletBase_ + "menuDef&menuClass=MenuBar",
 		
-		modeltree: servletBase_ + "modelTree",
+		modeltree: function(tab) {
+			var uri = servletBase_ + "modelTree";
+			if(tab !== undefined && tab !== null) {
+				uri+="&currentTab="+tab;
+			}
+			return uri;
+		},
 		
-		setModel: function(modelId,otherArgs) {
+		setTreeNode: function(modelId,otherArgs,nodeType) {
 			var args = "";
 			if(otherArgs) {
 				for(var i in otherArgs) {
@@ -67,7 +97,7 @@ define([],function(){
 					}
 				}
 			}
-			return servletBase_ + "command&cmdClass=OTHER&cmdKey=MODEL_SELECTION&modelID=" + modelId + args;
+			return servletBase_ + "command&cmdClass=OTHER&cmdKey=" + nodeType.toUpperCase() + "_SELECTION&nodeID=" + modelId + args;
 		},
 		
 		expData: BASE_LOCATION + "expdata/",
@@ -80,14 +110,21 @@ define([],function(){
 		
 		modelImage: function(modelId) {
 			return servletBase_ + "modelImage" 
-				+ (modelId ? "&model="+modelId : "");
+				+ (modelId ? "&modelID="+modelId : "");
 		},
 		
-		modelJson: function(modelId) {
-			if(modelId) {
-				return servletBase_ + "modelJson&model="+modelId;
+		nodeJson: function(nodeId,tab,nodeType) {
+			var uri = servletBase_ + "nodeJson";
+			if(nodeId) {
+				uri+="&nodeID="+nodeId;
 			}
-			return servletBase_ + "modelJson";
+			if(tab !== undefined && tab !== null) {
+				uri+="&currentTab="+tab;
+			}
+			if(nodeType) {
+				uri+="&nodeType="+nodeType;
+			}
+			return uri;
 		},
 				
 		// Build the popObjID and objubID of a link segment
@@ -103,7 +140,7 @@ define([],function(){
 
 		
 		// Build a popup menu request
-		popup: function(nodeType,hit,clientstate) {
+		popup: function(nodeType,hit,clientstate,tab) {
 			var subObjId = null;
 			if(hit.getType() === "linkage") {
 				subObjId = "{" + 
@@ -116,11 +153,16 @@ define([],function(){
 			return servletBase_ + "menuDef&menuClass=PopupMenu"
 			+ "&popClass=" + nodeType 
 			+ (hit ? ("&popObjID=" + (hit.getChildID ? hit.getChildID() : hit.id) + (subObjId ? "&objSubID="+subObjId : "")) : "")
-			+ (clientstate ? "&clientstate=true" : "");
+			+ (clientstate ? "&clientstate=true" : "")
+			+ (tab !== null && tab !== undefined ? "&currentTab="+tab : "");
 		},
 		
 		modelTreeContext: function(modelId) {
 			return servletBase_ + "menuDef&menuClass=ModelTreeMenu&popObjID=" + modelId;
+		},
+		
+		tabContext: function() {
+			return servletBase_ + "menuDef&menuClass=TabMenu";
 		},
 		
 		// Build a dialog box request

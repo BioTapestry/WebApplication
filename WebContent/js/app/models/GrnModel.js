@@ -45,7 +45,11 @@ define([
 		
 		annotationImages_: null,
 		
+		// This is the root instance
 		vfgParent_: null,
+		
+		// This is the direct parent model
+		parent_: null,
 		
 		message_: null,
 		
@@ -58,21 +62,7 @@ define([
 		_drawingObjects_Setter: function(val) {
 			this.drawingObjects_[this.state_] = val;
 		},
-		
-		cachedInRenderer_: null,
-		getCached: function(state) {
-			if(!this.cachedInRenderer_) {
-				return false;
-			}
-			return this.cachedInRenderer_[state];
-		},
-		setCached: function(state,val) {
-			if(!this.cachedInRenderer_) {
-				this.cachedInRenderer_ = {};
-			}
-			this.cachedInRenderer_[state] = val;
-		},
-		
+				
 		// The time at which the information for this model will
 		// expire and need to be refreshed off the server
 		expiry_: 0,
@@ -137,6 +127,14 @@ define([
 		
 		overlayDefs_: null,
 		
+		// Quick method for loading up new information
+		update: function(params) {
+			for(var i in params) {
+				if(this.hasOwnProperty(i)) {
+					this[i] = params[i];
+				}
+			}
+		},
 		
 		constructor: function(params) {
 			declare.safeMixin(this,params);

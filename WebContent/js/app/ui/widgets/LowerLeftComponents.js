@@ -1,189 +1,254 @@
-/*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
-**                            Seattle, Washington, USA. 
-**
-**    This library is free software; you can redistribute it and/or
-**    modify it under the terms of the GNU Lesser General Public
-**    License as published by the Free Software Foundation; either
-**    version 2.1 of the License, or (at your option) any later version.
-**
-**    This library is distributed in the hope that it will be useful,
-**    but WITHOUT ANY WARRANTY; without even the implied warranty of
-**    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-**    Lesser General Public License for more details.
-**
-**    You should have received a copy of the GNU Lesser General Public
-**    License along with this library; if not, write to the Free Software
-**    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-*/
-
 define([
-    "dijit/layout/BorderContainer",
-    "dijit/layout/ContentPane",
-    "./TimeSlider",
-    "./ModelAnnotationImage",
-    "./Overlay",
-    "dojo/domReady!"
+	"dijit/layout/BorderContainer"
+	,"dojo/_base/array"
+	,"dojo/_base/declare"
+	,"./TimeSliderWidget"
+	,"./Overlay/OverlayWidget"
+	,"./ModelAnnotImgWidget"
+	,"app/utils"
 ],function(
-	BorderContainer,
-	ContentPane,
-	TimeSlider,
-	ModelAnnotImg,
-	Overlay
+	BorderContainer
+	,DojoArray
+	,declare
+	,TimeSlider
+	,Overlay
+	,ModelAnnotImg
+	,utils
 ){
 	
-	var components_ = {
+	var MIN_SIZE_LEFT_LOWER_CONTAINER = 85;
+	
+	var componentProps = {
 		timeSlider: {
-			module: TimeSlider,
 			prefReg: "top",
 			promote: true,
-			component: null
+			module: TimeSlider
 		},
 		modelAnnotImg: {
-			module: ModelAnnotImg,
 			prefReg: "bottom",
 			promote: false,
-			component: null
+			module: ModelAnnotImg
 		},
 		overlay: {
-			module: Overlay,
 			prefReg: "center",
 			promote: false,
-			component: null
+			module: Overlay
 		}
 	};
 	
-	var MIN_SIZE_LEFT_LOWER_CONTAINER = 15;
 	
-    var container_ = new BorderContainer({
-    	id: "left_lower_wrapper",
-    	region: "bottom",
-    	gutters: false,
-    	minSize: MIN_SIZE_LEFT_LOWER_CONTAINER
-    });
-    
-	container_.startup();
-    
-    function resizeContainer_(newSize) {
-		if(newSize !== undefined && newSize !== null) {
-			if(newSize.h !== undefined && newSize.h !== null) {
-				MIN_SIZE_LEFT_LOWER_CONTAINER = newSize.h;
-				container_.set("minSize",newSize.h);
-			}
-			container_.resize(newSize);
+	////////////////////////////
+	// LowerLeftComponents
+	///////////////////////////
+	// 
+	// Extended BorderContainer which houses all of the lower left BT components
+	// (Overlay, Model Annotation Image, Time Slider) which are active.
+	
+	var LowerLeftComponents = declare([BorderContainer],{
 			
-			// Because all new size in a BorderContainer goes to the center, we have to resize any fixed elements
-			// (in this case, top and bottom) to get them back to the right size
-			components_.modelAnnotImg.module.resize();
-			components_.timeSlider.module.resize();
-			
-		} else {
-			container_.resize();
-		}    	
-    }
-    
-    
-	function _arrangePanesAndSize() {
-		var promotable,center,first,totalHeightNeeded = 0;
+		// A convenience object indicating which modules are actually loaded; can also
+		// be used to iterate through loaded modules
+		_components: null,
 		
-		if(container_.getChildren().length > 0) {
-			for(var i in components_) {
-				if(components_.hasOwnProperty(i) && components_[i].component !== null) {
-					if(!first) {
-						first = components_[i].component;
-					}
-					
-					if(components_[i].promote) {
-						promotable = components_[i].component;
-					}
-					
-					// A minimum of one component MUST have a region of center
-					if(components_[i].prefReg === "center") {
-						if(!center) {
-							center = components_[i].component;
+		_totalReqHeight: 0,
+		
+		// If an object is loaded, a copy of the reference is stored here for use
+		timeSlider: null,
+		overlay: null,
+		modelAnnotImg: null,
+		
+		// The current model ID; this is more relevant to our children than
+		// to us, but we store a copy
+		modelId: null,
+		
+		_setModelIdAttr: function(val,params) {
+			var self=this;
+			this.modelId = val;
+			DojoArray.forEach(Object.keys(this._components),function(comp){
+				self[comp].set("modelId",val,params);
+			});
+		},
+		
+		// Resizing events require us to adjust the container's area,
+		// because if we have all 3 items normally the 'center' item
+		// gets any leftover area, but we actually need each part to
+		// have a fixed amount of space.
+		_arrangePanesAndSize: function() {
+			var promotable,center,first,totalHeightNeeded = 0;
+			var self=this;
+			if(Object.keys(this._components).length > 0) {
+				for(var i in componentProps) {
+					if(this[i]) {
+						if(!first) {
+							first = this[i];
 						}
+					
+						if(componentProps[i].promote) {
+							promotable = this[i];
+						}
+						
+						// A minimum of one component MUST have a region of center
+						if(componentProps[i].prefReg === "center") {
+							if(!center) {
+								center = this[i];
+							}
+						}
+						totalHeightNeeded += this[i].prefHeight();
+						this[i].set("region",componentProps[i].prefReg);
 					}
-					totalHeightNeeded += components_[i].module.prefHeight();
-					components_[i].component.set("region",components_[i].prefReg);
+				}
+				if(!center) {
+					center = (!promotable) ? first : promotable;
+					center.set("region","center");
 				}
 			}
 			
-			if(!center) {
-				center = (!promotable) ? first : promotable;
-				center.set("region","center");
-			}
-		}
+			this._totalReqHeight = totalHeightNeeded;
+			
+			require(["views"],function(BTViews){
+				self.resize({h: (totalHeightNeeded)});
+				BTViews.resizeApplicationPane();
+			});
+		},
+		
+		// Make sure that newSize has the minimum size we require;
+		// if not, force it to
+		resize: function(newSize) {
+			if(newSize !== undefined && newSize !== null) {
+				if(newSize.h !== undefined && newSize.h !== null) {
+					MIN_SIZE_LEFT_LOWER_CONTAINER = newSize.h;
+					this.set("minSize",newSize.h);
+				}
+				this.inherited(arguments);
 				
-		require(["views"],function(BTViews){
-			resizeContainer_({h: (totalHeightNeeded)});
-			BTViews.resizeApplicationPane();
-		});
+				// Because all new size in a BorderContainer goes to the center, we have to resize any fixed elements
+				// (in this case, top and bottom) to get them back to the right size
+				this.modelAnnotImg && this.modelAnnotImg.resize();
+				this.timeSlider && this.timeSlider.resize();
+				
+			} else {
+				this.inherited(arguments);
+			}
+		},
+		    	
+		// Destroy a given component of this LLC
+		remove: function(thisComp,withoutResize) {
+			if(this[thisComp]) {
+				this.removeChild(this[thisComp]);
+				this[thisComp].remove();
+				this[thisComp] = null;
+				delete this._components[thisComp];
+				if(!withoutResize) {
+					this._arrangePanesAndSize();	
+				}
+			}
+		},
+		
+		// Destroy all of our components
+		removeAll: function(withoutResize) {
+			var self=this;
+			DojoArray.forEach(Object.keys(this._components),function(comp){
+				self.remove(comp,withoutResize);
+			});
+		},
+		
+		// Load a specific component, optionally destroy the existing component
+		load: function(thisComp,params,withRemove) {
+    		if(this[thisComp] && withRemove) {
+    			this.remove(thisComp);
+    		}
+    		this[thisComp] = new componentProps[thisComp].module(params);
+    		this.addChild(this[thisComp]);
+    		this._components[thisComp] = true;
+    		this._arrangePanesAndSize();
+		},
+    	
+    	disable: function(thisComp) {
+    		this[thisComp] && this[thisComp].set("disabled",true);
+    	},
+    	
+    	enable: function(thisComp) {
+    		this[thisComp] && this[thisComp].set("disabled",false);
+    	},
+    	
+    	getValue: function(thisComp,subWidget) {
+    		if(subWidget) {
+    			return this[thisComp].getValue(subWidget);
+    		}
+    		return this[thisComp].get("value");
+    	},
+    	
+    	setValue: function(thisComp,args) {
+    		if(args && args.subWidget) {
+    			this[thisComp].setValue(args.subWidget,args);
+    		} else {
+    			this[thisComp].set("value",args);
+    		}
+    	},
+    	
+    	setProp: function(thisComp,thisProp,value,args) {
+    		if(this[thisComp]) {
+    			if(args && args.subWidg) {
+    				this[thisComp].setProp(args.subWidg,thisProp,value,args);
+    			} else {
+    				this[thisComp].set(thisProp,value,args);	
+    			}
+    			
+    		}
+    	},
+    	
+    	applyCurrentOverlay: function() {
+    		this.overlay && this.overlay.applyCurrentOverlay();
+    	},
+    	setOverlay: function(overlay,pathSet) {
+    		this.overlay && this.overlay.setOverlay(overlay,pathSet);
+    	},
+    	toggleModules: function(e) {
+    		if(this.overlay) {
+    			return this.overlay.toggleModules(e);	
+    		}
+    		return null;
+    	},
+		
+		postCreate: function(params){
+			this.inherited(arguments);
+		},
+		
+		constructor: function(params) {
+			
+			this.id = "lowerleftWrapper_" + (params.id || utils.makeId());
+			params["class"] = "LeftLowerWrapper";
+	    	params.region = "center";
+	    	params.gutters = false;
+	    	params.minSize = MIN_SIZE_LEFT_LOWER_CONTAINER;
+	    	this._components = {};
+			
+			this.inherited(arguments);
+		}
+	});
+	
+	// Our collection of all LowerLeftComponents, indexed by their relevant tabIDs
+	var _llcCollex = {
 	};
 	
-	function _clear(thisComponent,withoutResize) {
-		if(components_[thisComponent].module.isLoaded()) {
-			container_.removeChild(components_[thisComponent].component);
-			components_[thisComponent].module.remove();
-			components_[thisComponent].component = null;
-			if(!withoutResize) {
-				_arrangePanesAndSize();	
+	return {
+		getLowerLeftComponents: function(tabId) {
+			return _llcCollex[tabId];
+		},
+		makeNewLowerLeftComponents: function(tabId,args) {
+			if(_llcCollex[tabId]) {
+				console.error("[ERROR] That LowerLeftComponents already exists! ("+tabId+")");
+			} else {
+				_llcCollex[tabId] = new LowerLeftComponents(args || {});	
 			}
+			return _llcCollex[tabId];
+		},
+		remove: function(tabId) {
+			if(_llcCollex[tabId]) {
+				_llcCollex[tabId].removeAll();
+				_llcCollex[tabId].destroyRecursive();
+				delete _llcCollex[tabId];
+			}			
 		}
 	};
-	
-    return {
-    	resizeContainer: function(newSize) {
-    		resizeContainer_(newSize);
-    	},
-    	
-    	clear: function(thisComponent,withoutResize) {
-    		_clear(thisComponent,withoutResize);
-    	},
-    	
-    	clearAll: function() {
-    		for(var i in components_) {
-    			if(components_.hasOwnProperty(i)) {
-    	    		_clear(i);
-    			}
-    		}
-    	},
-    	
-    	disable: function(thisComponent,args) {
-    		if(components_[thisComponent].module.isLoaded()) {
-    			components_[thisComponent].module.disable(args);
-    		}
-    	},
-    	
-    	enable: function(thisComponent) {
-    		components_[thisComponent].module.enable();
-    	},    	
-    	
-    	load: function(thisComponent,params,removeFirst) {
-    		if(components_[thisComponent].module.isEnabled() && removeFirst) {
-    			components_[thisComponent].module.remove();
-    		}
-    		components_[thisComponent].component = components_[thisComponent].module.load(params);
-    		container_.addChild(components_[thisComponent].component);
-    		components_[thisComponent].module.start();
-    		_arrangePanesAndSize();
-    	},
-    	
-    	getModule: function(component) {
-    		return components_[component].module;
-    	},
-
-    	getValue: function(thisComponent) {
-    		return components_[thisComponent].module.getValue();
-    	},
-    	
-    	setValue: function(thisComponent,args) {
-    		components_[thisComponent].module.setValue(args);
-    	},
-
-    	getContainer: function() {
-    		return container_;
-    	}
-    	
-    };
-	
 });

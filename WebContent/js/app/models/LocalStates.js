@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2015 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -35,7 +35,7 @@ define([
 	// LocalStates
 	//////////////////////////////////
 	//
-	// A module defining locally-controller action states. Via the StatesController, these states
+	// A module defining locally-controlled action states. Via the StatesController, these states
 	// can be watched for changes in their value. If a state is not a member of the LocalStates singleton
 	// then its status will not be tracked for watch callbacks, but it can be added for general
 	// value storage.
@@ -50,8 +50,14 @@ define([
 		MAIN_CENTER_ON_PREVIOUS_SELECTED: null,
 		MAIN_CENTER_ON_NEXT_SELECTED: null,
 		POP_APPEND_TO_CURRENT_SELECTION: null,
+		MAIN_DRAW_NETWORK_MODULE: null,
+		MAIN_DRAW_NETWORK_MODULE_LINK: null,
+		MAIN_EDIT_CURR_NETWORK_OVERLAY: null,
+		MAIN_REMOVE_CURR_NETWORK_OVERLAY: null,
+		MAIN_TOGGLE_MODULE_COMPONENT_DISPLAY: null,
 		ON_PATH: null,
 		PATH_COMBO: null,
+		
 		
 		_MAIN_ZOOM_INSetter: function(val) {
 			this.MAIN_ZOOM_IN = val;
@@ -108,17 +114,48 @@ define([
 			return this.MAIN_CENTER_ON_PREVIOUS_SELECTED;
 		},
 		
+		MAIN_DRAW_NETWORK_MODULESetter: function(val) {
+			this.MAIN_DRAW_NETWORK_MODULE = val;
+		},
+		MAIN_DRAW_NETWORK_MODULEGetter: function() {
+			return this.MAIN_DRAW_NETWORK_MODULE;
+		},
+		MAIN_DRAW_NETWORK_MODULE_LINKSetter: function(val) {
+			this.MAIN_DRAW_NETWORK_MODULE_LINK = val;
+		},
+		MAIN_DRAW_NETWORK_MODULE_LINKGetter: function() {
+			return this.MAIN_DRAW_NETWORK_MODULE_LINK;
+		},
+		MAIN_EDIT_CURR_NETWORK_OVERLAYSetter: function(val) {
+			this.MAIN_EDIT_CURR_NETWORK_OVERLAY = val;
+		},
+		MAIN_EDIT_CURR_NETWORK_OVERLAYGetter: function() {
+			return this.MAIN_EDIT_CURR_NETWORK_OVERLAY;
+		},
+		MAIN_REMOVE_CURR_NETWORK_OVERLAYSetter: function(val) {
+			this.MAIN_REMOVE_CURR_NETWORK_OVERLAY = val;
+		},
+		MAIN_REMOVE_CURR_NETWORK_OVERLAYGetter: function() {
+			return this.MAIN_REMOVE_CURR_NETWORK_OVERLAY;
+		},
+		MAIN_TOGGLE_MODULE_COMPONENT_DISPLAYSetter: function(val) {
+			this.MAIN_TOGGLE_MODULE_COMPONENT_DISPLAY = val;
+		},
+		MAIN_TOGGLE_MODULE_COMPONENT_DISPLAYGetter: function() {
+			return this.MAIN_TOGGLE_MODULE_COMPONENT_DISPLAY;
+		},
+		
 		ON_PATHSetter: function(val) {
 			this.ON_PATH = val;
 		},
 		ON_PATHGetter: function() {
 			return this.ON_PATH;
-		},
+		},	
 		PATH_COMBOSetter: function(val) {
-			this.ON_PATH = val;
+			this.PATH_COMBO = val;
 		},
 		PATH_COMBOGetter: function() {
-			return this.ON_PATH;
+			return this.PATH_COMBO;
 		},	
 		
 		constructor: function(states) {
@@ -136,8 +173,14 @@ define([
 		MAIN_CENTER_ON_PREVIOUS_SELECTED: false,
 		MAIN_CENTER_ON_NEXT_SELECTED: false,
 		POP_APPEND_TO_CURRENT_SELECTION: null,
-		ON_PATH: null,
-		PATH_COMBO: null
+		MAIN_DRAW_NETWORK_MODULE: false,
+		MAIN_DRAW_NETWORK_MODULE_LINK: false,
+		MAIN_EDIT_CURR_NETWORK_OVERLAY: false,
+		MAIN_REMOVE_CURR_NETWORK_OVERLAY: false,
+		MAIN_TOGGLE_MODULE_COMPONENT_DISPLAY: false,	
+		ON_PATH: {},
+		PATH_COMBO: {},
+		SHOW_OVERLAY: null
 	});
 	
 	// Singleton

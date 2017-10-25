@@ -32,10 +32,11 @@ define([
 		"tablet":2,
 		"intercell":2,
 		"net_module_label": 0,
+		"group_label": 1,
 		"net_module_interior": 5,
 		"net_module_boundary": 0,
 		"box":2,
-		"note": 3, 
+		"note": 1, 
 		"group": 4
 	};
 	
@@ -100,6 +101,14 @@ define([
 				});
 				return sortedCheck[0];
 			}
+		},
+		
+		movableHit: function(hits) {
+			var canMove = false;
+			for(var i = 0; i < hits.length() && !canMove; i++) {
+				canMove = (hits[i] !== "group");
+			}
+			return canMove;
 		},
 		
 		getTopNoteHit: function(hits) {

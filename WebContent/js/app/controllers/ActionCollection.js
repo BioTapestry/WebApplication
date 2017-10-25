@@ -1,5 +1,5 @@
 /*
-**    Copyright (C) 2003-2014 Institute for Systems Biology 
+**    Copyright (C) 2003-2016 Institute for Systems Biology 
 **                            Seattle, Washington, USA. 
 **
 **    This library is free software; you can redistribute it and/or
@@ -21,12 +21,16 @@ define([
     "dojo/on",
     "dojo/_base/array",
     "dojo/Deferred",
-    "app/utils"
+    "dijit",
+    "app/utils",
+    "static/BTConst"
 ],function(
 	on,
 	DojoArray,
 	Deferred,
-	utils
+	dijit,
+	utils,
+	BTConst
 ) {
 	
 	///////////////////////////////////////
@@ -34,11 +38,38 @@ define([
 	//////////////////////////////////////
 	//
 	// A module for collecting the main action sets of the application: MAIN, POP, MODEL_TREE, OTHER, and CLIENT
-	
-
-	// The DOM node ID of the node which contains the canvas. This must be set by views/main during initialization
-	// so the various actions can request the correct Controllers (Artboard, GrnModel) and BTCanvas.
+	//
+	// Module-wide variables
+	//----------------------
+	// The currently selected tab's database ID. This will *only* be set for the app/main instance of the webapp, 
+	// and not for any sub-window (expdata, pathing) spawned from it. In order to have have access to the current 
+	// tab in those windows, it must be provided in any arguments to methods
+	var CURRENT_TAB;
+	//
+	// The DOM node ID of the node on the current tab which contains the canvas. This will *only* be 
+	// set for the app/main instance of the webapp, and not for any sub-window (expdata, pathing) 
+	// spawned from it.
 	var APP_CANVAS_CONTAINER_NODE_ID;
+	//
+	// The current mode of the client. This defaults to VIEWER, and is set by views/main when it is first loaded
+	var CLIENT_MODE = BTConst.CLIENTMODE_VIEWER;
+		
+	
+	///////////////////////////////////
+	// LAUNCH_ERROR_DIALOG
+	////////////////////////////
+	//
+	//
+	function LAUNCH_ERROR_DIALOG(msg,title,action) {
+		require(["dialogs/DialogFactory"],function(DialogFactory){
+			var nsDialog = DialogFactory.makeBasicErrorDialog({
+				title: title || "Error!",
+				content: msg,
+				okCmdAction: action || "DO_NOTHING"
+			});
+			nsDialog.show();
+		});			
+	};
 	
 	/////////////////////////////////////
 	// WARN_RESTART_SESSION
@@ -71,13 +102,11 @@ define([
 		require(["views/BioTapestryCanvas"],function(BTCanvas){
 			GET_SELECTION_OBJECTS(e.newVal,BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID)).then(function(nodes){
 				if(e.newVal.set) {
-					require(["widgets/LowerLeftComponents"],function(LowerLeftComponents){
-						SET_NETWORK_MODULES({
-							overlay: null,modules: nodes, enable: true, enable_other: "INVERSE", reveal: "NO_CHANGE"
-						}).then(function(){
-							e.moduleZoom = "ACTIVE";
-							ZOOM_TO_MODULES(e);	
-						});
+					SET_NETWORK_MODULES({
+						overlay: null,modules: nodes, enable: true, enable_other: "INVERSE", reveal: "NO_CHANGE"
+					}).then(function(){
+						e.moduleZoom = "ACTIVE";
+						ZOOM_TO_MODULES(e);	
 					});
 				} else {
 					e.newVal = nodes;
@@ -111,7 +140,7 @@ define([
 	function SET_NETWORK_MODULES(e) {
 		var asyncAction = new Deferred();
 		require(["widgets/LowerLeftComponents"],function(LowerLeftComponents){
-			LowerLeftComponents.getModule("overlay").toggleModules(e).then(function(){
+			LowerLeftComponents.getLowerLeftComponents(CURRENT_TAB).toggleModules(e).then(function(){
 				asyncAction.resolve();
 			});
 		});
@@ -123,10 +152,11 @@ define([
 	/////////////////////////////////
 	//
 	//
-	function CHECKBOX_TOGGLE(key,id) {
+	function CHECKBOX_TOGGLE(key,e) {
+		var id = dijit.getEnclosingWidget(e.target).getParent().hitObj.id;
 		require(["static/XhrUris","controllers/XhrController"],function(XhrUris,XhrController){
 			XhrController.xhrRequest(
-				XhrUris.cmd("POP",key,{objID: id}),{method: "POST"}).then(function(response){
+				XhrUris.cmd("POP",key,{objID: id, currentTab: CURRENT_TAB}),{method: "POST"}).then(function(response){
 			},function(err){
 				if(err.status === "NEW_SESSION") {
 					WARN_RESTART_SESSION();
@@ -134,7 +164,6 @@ define([
 			});
 		});			
 	};
-	
 	
 	////////////////////////////////
 	// MAIN_TREE_PATH
@@ -144,7 +173,8 @@ define([
 	//
 	function MAIN_TREE_PATH(which) {
 		require(["controllers/XhrController","static/XhrUris"],function(XhrController,XhrUris){
-			var args = which.uri ? { uri: which.uri } : null;
+			var args = which.uri ? { uri: which.uri } : {};
+			args.currentTab = CURRENT_TAB;
 			XhrController.xhrRequest(XhrUris.cmd("MAIN",which.key,args),{method: "POST"}).then(function(data){
 				if(data.resultType === "SUCCESS") {
 					if(!which.noPath) {
@@ -170,46 +200,6 @@ define([
 			});
 		});
 	};
-	
-	/////////////////////////
-	// ANALYZE_PATHS
-	/////////////////////////
-	//
-	// Aggregate method for parallel pathing windows
-	//
-	function ANALYZE_PATHS(cmdKey,argsObj,click) {
-		require(["static/XhrUris","controllers/XhrController"],function(XhrUris,XhrController){			
-			XhrController.xhrRequest(XhrUris.cmd("POP",cmdKey,argsObj),{method:"POST"}).then(function(data){
-				switch(data.resultType) {
-					case "XPLAT_FRAME":
-						click && click(data.resultsMap);
-						require(["controllers/WindowController","app"],function(WindowController,appMain){
-							WindowController.openWindow({
-								id: "pathing", uri: XhrUris.pathing, title: "Pathing Display", 
-								failoverType: "PATH_DISPLAY", controllerName: "controllers/pathing/PathingController",
-								dimensions: { h: 500, w: 900}
-							}).then(function(){
-								data.clientMode = appMain.getClientMode();
-								WindowController.sendCmdToWindow("pathing","LOAD_PATH_FRAME",data);
-							});
-						});
-
-						break;
-					case "ILLEGAL_CLICK_PROCESSED":
-						// TODO: Make this a real error message
-						alert("That click didn't work! Please try again!");
-						break;
-					default: 
-						console.error("[ERROR] Received an unexpected response from the server!");
-				}
-			},function(err){
-				if(err.status === "NEW_SESSION") {
-					WARN_RESTART_SESSION();
-				}
-			});
-		});		
-	};
-	
 
 	///////////////////////////////////////////////////////////
 	// GET_SELECTION_OBJECTS
@@ -302,7 +292,8 @@ define([
 			}).then(function(result){		
 				WindowController.sendCmdToWindow(
 					args.id + "_expdata","LOAD_DATA",{
-						windowLink: "<p><a href=\"expdata/#/expd/" + args.action.cmdClass + "/" + args.action.cmdKey + "/"+args.id
+						windowLink: "<p><a href=\"expdata/#/expd/" + args.action.cmdClass +"/"+ args.action.cmdKey 
+							+"/"+ args.id +"/"+ CURRENT_TAB
 							// If this is a link, it might be from an ambiguous hit that needed to be resolved, and we will
 							// need to reproduce that response if a new window is opened. Store that ID here instead of the
 							// name (because links use FrameTitles which are supplied by the server, not names)
@@ -312,13 +303,41 @@ define([
 						queryString: "*[id^=\"exp_data_container\"]", preFetched: !args.ExperimentalData.incomplete, 
 						expData: args.ExperimentalData.HTML, title: args.FrameTitle || "Experimental Data for " + args.name,
 						objId: args.ExperimentalData.ID, genomeKey: args.ExperimentalData.genomeKey, 
-						cmdKey: args.ExperimentalData.flowKey, cmdClass: "OTHER"
+						cmdKey: args.ExperimentalData.flowKey, cmdClass: "OTHER",
+						currentTab: CURRENT_TAB
 					}
 				);
 			},function(err){
 				console.error("[ERROR] Failed to open a new window or dialog: "+ err);
 			});
 		});
+	};
+	
+	//////////////////
+	// ANALYZE_PATHS
+	/////////////////
+	//
+	// Aggregator method for the POP_ANALYZE_PATHS actions
+	function ANALYZE_PATHS(cmdClass,stepData,uriArgs) {
+		require(["static/XhrUris","controllers/ActionController"],function(XhrUris,ActionController){
+			stepData.currTab = CURRENT_TAB;
+			stepData.action = {cmdClass: "POP",cmdKey: cmdClass,args: uriArgs};
+			stepData.drawingAreaId = stepData.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID;
+			stepData.frame = {
+				id: "pathing",
+				uri: XhrUris.pathing,
+				title: "Pathing Display",
+				failOver: "PATH_DISPLAY",
+				controller: "controllers/pathing/PathingController",
+				h: 500, w: 900,
+				postOpen: "LOAD_PATH_FRAME",
+				clientMode: CLIENT_MODE
+			};
+			stepData.clickAction = "POP_"+cmdClass;
+			stepData.persistentArgs = ["id","uri","clickId","frame"];		
+
+			ActionController.runAction(stepData);		
+		});		
 	};
 	
 	//////////////////////////////
@@ -331,6 +350,9 @@ define([
 	function PATH_MODEL_GENERATION(args) {
 		var loadAsync = new Deferred();
 		require(["controllers/XhrController","static/XhrUris"],function(xhrController,XhrUris){	
+			if(!args.currentTab) {
+				args.currentTab = CURRENT_TAB;
+			}
 			xhrController.xhrRequest(XhrUris.cmd("OTHER","PATH_MODEL_GENERATION",args)).then(function(response){
 				loadAsync.resolve(response);	
 			});
@@ -340,8 +362,7 @@ define([
 			}
 		});
 		return loadAsync;	
-	};
-			
+	};		
 	
 	////////////////////////////////////////
 	// SELECT_AND_ZOOM
@@ -350,14 +371,13 @@ define([
 	// Aggregate method for all selecting on the ArtboardController. Zooming is optional
 	// via sending truthy noZoom in e
 	// 
-	//
 	function SELECT_AND_ZOOM(e) {
 		require(["controllers/ArtboardController"],function(ArtboardController){
 			var thisController = ArtboardController.getArtboardController(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID);
 			if(e.noZoom) {
 				thisController.selectNodes(e.newVal,e.AppendToSelection);
 			} else {
-				thisController.selectNodesOnCanvasAndZoom(e.newVal,e.AppendToSelection);
+				thisController.selectNodesOnCanvasAndZoom(e.newVal,e.AppendToSelection,true);
 			}
 		});			
 	};
@@ -370,12 +390,16 @@ define([
 	//
 	function CLIENT_GOTO_MODEL(e) {
 		var asyncModelChange = new Deferred();
-		require(["controllers/GrnModelController","controllers/ModelTreeController"],
-			function(GrnModelController,ModelTreeController){
-			var modelId = (!e.isGrnId ? GrnModelController.splitModelId(e.modelId) : {modelId: e.modelId,state: e.state});
-			ModelTreeController.selectNodeOnTree(modelId.modelId);
-			GrnModelController.setModel(modelId.modelId,modelId.state,e.overlay,e.onPath).then(function(){
+		require(["controllers/GrnModelController","views"],function(GrnModelController,BTViews){
+			var grnMC = GrnModelController.getModelController(CURRENT_TAB);
+			var modelId = (!e.isGrnId ? grnMC.splitModelId(e.modelId) : {modelId: e.modelId,state: e.state});
+			BTViews.selectOnTree(modelId.modelId);
+			grnMC.setModel(modelId.modelId,modelId.state,e.overlay,e.onPath,e.isSliderChange).then(function(){
 				asyncModelChange.resolve();
+			},function(err){
+				console.debug("[WARNING] Unable to set model to "+modelId.modelId+". Model is now "+err.modelId_);
+				// Resolve the chain here, because nothing waits asynchronously on a success of this method
+				asyncModelChange.resolve("[WARNING] Unable to set model to "+modelId.modelId+". Model is now "+err.modelId_);
 			});
 		});
 		return asyncModelChange.promise;
@@ -392,31 +416,31 @@ define([
 	// they are found in
 	//
 	function CLIENT_GOTO_MODEL_AND_SELECT(e) {
-		require(["controllers/ArtboardController","controllers/GrnModelController",
-	         "controllers/ModelTreeController","dialogs/DialogFactory"],
-			function(ArtboardController,GrnModelController,ModelTreeController,DialogFactory){
+		require(["controllers/ArtboardController","controllers/GrnModelController","views","dialogs/DialogFactory"],
+			function(ArtboardController,GrnModelController,BTViews,DialogFactory){
 			
-			var modelId = (e.newVal instanceof Array ? e.newVal[0].modelId : e.newVal.modelId);			
+			var grnMC = GrnModelController.getModelController(CURRENT_TAB);
+			var modelId = (e.newVal instanceof Array ? e.newVal[0].modelId : e.newVal.modelId);
 			
 			var goToModelAndSel = function(clickEvent) {
 				var entities = (e.newVal instanceof Array ? e.newVal : [e.newVal]);
 				
-				if(modelId && GrnModelController.get("currentModel_") !== modelId) {
-					ModelTreeController.selectNodeOnTree(modelId);
-					GrnModelController.set("currentModel_",modelId);
+				if(modelId && grnMC.get("currentModel_") !== modelId) {
+					BTViews.selectOnTree(modelId);
+					grnMC.set("currentModel_",modelId);
 					if(clickEvent.disableOverlays) {
-						GrnModelController.setModelOverlay("None");	
+						grnMC.setModelOverlay("None");	
 					}
 				}
 						
-				GrnModelController.getCurrentModel().then(function(){
+				grnMC.getCurrentModel().then(function(){
 					if(e.mapLinks) {
 						require(["controllers/XhrController","static/XhrUris"],function(XhrController,XhrUris){
 							var linkIds = [];
 							DojoArray.forEach(entities,function(link){
 								linkIds.push(link.itemId);
 							});
-							XhrController.xhrRequest(XhrUris.mapLinks(linkIds,modelId)).then(function(response){
+							XhrController.xhrRequest(XhrUris.mapLinks(linkIds,modelId),{currentTab: CURRENT_TAB}).then(function(response){
 								e.newVal = response.resultsMap.LINKS;
 								PARSE_AND_SEL_ZOOM(e);
 							});
@@ -425,10 +449,13 @@ define([
 						e.newVal = entities;
 						PARSE_AND_SEL_ZOOM(e);
 					}				
+				},function(err){
+					console.error("[Error] Unable to get the current model to select entities!");
+					LAUNCH_ERROR_DIALOG("[Error] Unable to get the current model to select entities!");
 				});
 			};
 			
-			GrnModelController.getModel(modelId).then(function(model){
+			grnMC.getModel(modelId).then(function(model){
 				var activeOpaqueOverlay = false;
 				var hasOpaquetStart = false;
 				if(model.overlayDefs_) {
@@ -475,36 +502,100 @@ define([
 	// Aggregate method for POP_SELECTION events, which all do the same thing:
 	// post a POP_SELECT command to the server, receive results and select+zoom
 	//
-	function POP_SELECT(entity,cmdKey) {
-		return function(e) {
-			require([
-		         "dijit","views/BioTapestryCanvas","controllers/XhrController","static/XhrUris","controllers/StatesController"
-	         ],function(dijit,BTCanvas,XhrController,XhrUris,StatesController){
-				var args = (cmdKey === "SELECT_LINK_TARGETS" ? 
-					{uri: XhrUris.linkIdUri(dijit.getEnclosingWidget(e.target).getParent().hitObj)} : {objID: entity});
-
-				XhrController.xhrRequest(XhrUris.cmd("POP",cmdKey,args)).then(function(response){
-					if(response.resultsMap.SearchResults) {
-						GET_SELECTION_OBJECTS(
-							response.resultsMap.SearchResults,BTCanvas.getBtCanvas(
-								e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID
-							)
-						).then(function(nodes) {
-							SELECT_AND_ZOOM(
-								{newVal: nodes, AppendToSelection: StatesController.getState("POP_APPEND_TO_CURRENT_SELECTION")}
-							);
-						});
-					}
-				},function(err){
-					if(err.status === "NEW_SESSION") {
-						WARN_RESTART_SESSION();
+	function POP_SELECT(e,cmdKey) {
+		var entity = dijit.getEnclosingWidget(e.target).actionArgs.id;
+		require([
+	         "views/BioTapestryCanvas","controllers/XhrController","static/XhrUris","controllers/StatesController"
+         ],function(BTCanvas,XhrController,XhrUris,StatesController){
+			var args = (cmdKey === "SELECT_LINK_TARGETS" ? 
+				{uri: XhrUris.linkIdUri(dijit.getEnclosingWidget(e.target).getParent().hitObj)} : {objID: entity});
+			args.currentTab = CURRENT_TAB;
+			XhrController.xhrRequest(XhrUris.cmd("POP",cmdKey,args)).then(function(response){
+				if(response.resultsMap.SearchResults) {
+					GET_SELECTION_OBJECTS(
+						response.resultsMap.SearchResults,BTCanvas.getBtCanvas(
+							e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID
+						)
+					).then(function(nodes) {
+						SELECT_AND_ZOOM(
+							{newVal: nodes, AppendToSelection: StatesController.getState("POP_APPEND_TO_CURRENT_SELECTION")}
+						);
+					});
+				}
+			},function(err){
+				if(err.status === "NEW_SESSION") {
+					WARN_RESTART_SESSION();
+				}
+			});
+		});	
+	};
+	
+	///////////////////////////
+	// EDIT_WIDGET_SETTINGS
+	//////////////////////////
+	//
+	//
+	function EDIT_WIDGET_SETTINGS(widgets) {
+		require(["dijit/registry","dojo/dom"],function(registry,dom){
+			DojoArray.forEach(Object.keys(widgets),function(id){
+				var widg = registry.byId(id);
+				
+				DojoArray.forEach(Object.keys(widgets[id]),function(adjustment){
+					switch(adjustment) {
+						case "TEXT_CONTENT_REPLACE":
+							dom.byId(id).innerHTML = dom.byId(id).innerHTML.replace(
+								widgets[id][adjustment].oldVal,widgets[id][adjustment].newVal
+							); 
+							break;
+					
+						case "CHOICE_LABEL_STRING_REPLACE":
+							DojoArray.forEach(widg.getChildren(),function(child){
+								child.set("label",child.get("label").replace(widgets[id][adjustment].oldVal,widgets[id][adjustment].newVal));
+							});
+							break;
+						case "INVALID_CHOICES":
+							widg && widg.removeChoices && widg.removeChoices(widgets[id][adjustment]);
+							break;
 					}
 				});
 			});
-		};		
+		});
+	}
+	
+	/////////////////////////
+	// EDITOR_PASS_THROUGH
+	////////////////////////
+	//
+	// All Editor-specific functionality is present in EditorActions,
+	// which is only available in Editor builds
+	//
+	function EDITOR_PASS_THROUGH(e,cmdClassAndKey) {
+		if(CLIENT_MODE === BTConst.CLIENTMODE_EDITOR) {
+			require(["controllers/EditorActions"],function(EditorActions){
+				e.currTab = CURRENT_TAB;
+				EditorActions[cmdClassAndKey](e);
+			});		
+		} else {
+			require(["ErrorMessages"],function(ErrMsgs){
+				console.error(ErrMsgs.ActionFailModeNotEd);
+			});
+		}
 	};
 	
-		
+	///////////////////
+	// EXPIRE_RELOAD
+	///////////////////
+	//
+	// Aggregate method for expiring and reloading a specified model, and optionally expiring some of its relatives
+	function EXPIRE_RELOAD(modelId,kids,branch,drawingAreaId) {
+		require(["controllers/GrnModelController","controllers/ArtboardController"],function(GrnModelController,ArtboardController){
+			GrnModelController.getModelController(CURRENT_TAB).expireAndReloadCurrent(modelId,kids,branch).then(function(){
+				ArtboardController.getArtboardController(drawingAreaId).redrawCurrent();	
+			});
+		});			
+	};
+	
+	
 	return {
 		
 		////////////////////////////////////////
@@ -514,6 +605,38 @@ define([
 		//
 		SET_CANVAS_CONTAINER_NODE_ID: function(id) {
 			APP_CANVAS_CONTAINER_NODE_ID = id;
+		},
+
+		////////////////////////////////////////
+		// SET_CURRENT_TAB
+		////////////////////////////////////////
+		//
+		//
+		SET_CURRENT_TAB: function(tabId) {
+			CURRENT_TAB = tabId;
+			if(CLIENT_MODE === BTConst.CLIENTMODE_EDITOR) {
+				require(["controllers/EditorActions"],function(EditorActions){
+					EditorActions.SET_CURRENT_TAB(tabId);
+				});
+			}
+		},
+
+		////////////////////////////////////////
+		// GET_CURRENT_TAB
+		////////////////////////////////////////
+		//
+		//
+		GET_CURRENT_TAB: function() {
+			return CURRENT_TAB;
+		},
+		
+		////////////////////
+		// SET_CLIENT_MODE
+		////////////////////
+		//
+		//
+		SET_CLIENT_MODE: function(mode) {
+			CLIENT_MODE = mode;
 		},
 		
 		//////////////////////////////////////
@@ -538,26 +661,40 @@ define([
 		// MAIN Editor Only actions
 		///////////////////////////////
 		//
-		// Editor-specific functionality is kept in the EditorActions module, which is not available in Viewer builds.
-		// None of these methods should be called in the viewer; if they are, they will produce a failed module load
-		// error.
-		MAIN_ADD: function(stepData) {
-			require(["controllers/EditorActions"],function(EditorActions){
-				EditorActions.MAIN_ADD(stepData);
-			});
+		// Convenience method to pass through any calls to Editor-specific functions which
+		// may arise from widgets built in a mixed Viewer/Editor context (eg. popup menus which
+		// have varying action sets in eaither mode). These methods pass Editor-specific
+		// calls on to the EditorActions module.
+		// 
+		// None of these methods should be called in the viewer; if they are, they will error
+		MAIN_ADD: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_ADD");
 		},
-		
 		MAIN_CANCEL_ADD_MODE: function(e) {
-			require(["controllers/EditorActions"],function(EditorActions){
-				EditorActions.MAIN_CANCEL_ADD_MODE();
-			});
+			EDITOR_PASS_THROUGH(e,"MAIN_CANCEL_ADD_MODE");
+		},
+		MAIN_LOAD: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_LOAD");
+		},
+		MAIN_NEW_TAB: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_NEW_TAB");
+		},
+		MAIN_CLOSE_TAB: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_CLOSE_TAB");
+		},
+		MAIN_REDESC_TAB: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_REDESC_TAB");
+		},
+		MAIN_RETITLE_TAB: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_RETITLE_TAB");
+		},
+		MAIN_DROP_ALL_BUT_THIS_TAB: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_DROP_ALL_BUT_THIS_TAB");
+		},
+		MAIN_DROP_THIS_TAB: function(e) {
+			EDITOR_PASS_THROUGH(e,"MAIN_DROP_THIS_TAB");
 		},
 		
-		MAIN_LOAD: function(stepData) {
-			require(["controllers/EditorActions"],function(EditorActions){
-				EditorActions.MAIN_LOAD(stepData);
-			});
-		},
 		
 		/////////////////
 		// MAIN_ABOUT
@@ -565,9 +702,9 @@ define([
 		//
 		// Opens the 'About' Dialog
 		MAIN_ABOUT: function() {
-			require(["dialogs/DialogFactory","dijit/registry","app"],function(DialogFactory,registry,appMain){
+			require(["dialogs/DialogFactory","dijit/registry"],function(DialogFactory,registry){
 				if(!registry.byId("about_dialog")) {
-					var aboutDialog = DialogFactory.makeAboutDialog({clientMode: appMain.getClientMode()});
+					var aboutDialog = DialogFactory.makeAboutDialog({clientMode: CLIENT_MODE});
 					aboutDialog.show();
 				}
 			});
@@ -580,18 +717,23 @@ define([
 		//
 		//
 		MAIN_ZOOM_TO_ALL_MODELS: function(e) {
-			require(["controllers/GrnModelController","views/BioTapestryCanvas"],function(GrnModelController,BTCanvas){
-				BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomToAllModels(GrnModelController.get("completeModelBounds_"));
+			require(["controllers/ArtboardController","views/BioTapestryCanvas"],function(ArtboardController,BTCanvas){
+				var myAbC = ArtboardController.getArtboardController(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID);
+				BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomToAllModels(myAbC.get("completeModelBounds_"));
 			});
 		},	
 		MAIN_ZOOM_OUT: function(e) {
-			require(["views/BioTapestryCanvas","dojo/dom"],function(BTCanvas,dom){
-				BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomOut();
+			require(["views/BioTapestryCanvas","controllers/StatesController"],function(BTCanvas,StatesController){
+				if(e.drawingAreaId || StatesController.getState("MAIN_ZOOM_OUT")) {
+					BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomOut();
+				}
 			});
 		},
 		MAIN_ZOOM_IN: function(e) {
-			require(["views/BioTapestryCanvas"],function(BTCanvas){
-				BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomIn();
+			require(["views/BioTapestryCanvas","controllers/StatesController"],function(BTCanvas,StatesController){
+				if(e.drawingAreaId || StatesController.getState("MAIN_ZOOM_IN")) {
+					BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomIn();
+				}
 			});
 		},
 		MAIN_ZOOM_TO_CURRENT_MODEL: function(e) {
@@ -612,6 +754,14 @@ define([
 		MAIN_ZOOM_TO_CURRENT_SELECTED: function(e) {
 			require(["controllers/ArtboardController"],function(ArtboardController){
 				ArtboardController.getArtboardController(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomToCurrSel();
+			});
+		},
+		MAIN_ZOOM_WARN: function(e) {
+			require(["dialogs/DialogFactory","dijit/registry","app"],function(DialogFactory,registry,appMain){
+				if(!registry.byId("zoom_warning_dialog")) {
+					var zwDialog = DialogFactory.makeZoomWarnDialog({type: e.zoomType});
+					zwDialog.show();
+				}
 			});
 		},
 			
@@ -650,8 +800,8 @@ define([
 			require(["controllers/ActionController","controllers/ArtboardController"],function(ActionController,ArtboardController){
 				ArtboardController.getArtboardController(APP_CANVAS_CONTAINER_NODE_ID).getCurrentModel().then(function(model){
 					var overlay = model.get("overlay_");
-					var args = (overlay && (overlay.id !== null) ? {clientstate:true} : null);
-					stepData.action = {cmdClass: "MAIN",cmdKey: "NETWORK_SEARCH", args: args}; 
+					stepData.currTab = CURRENT_TAB;
+					stepData.action = {cmdClass: "MAIN",cmdKey: "NETWORK_SEARCH", args: {clientstate:true}}; 
 					stepData.postDialogStep = "SEND_DIALOG_RESULT";
 					stepData.onSuccess = PARSE_AND_SEL_ZOOM;
 					stepData.postSuccessStep = "CLOSE";
@@ -661,6 +811,9 @@ define([
 					};
 					stepData.overlay = (overlay && (overlay.id !== null) ? overlay : null);
 					ActionController.runAction(stepData);
+				},function(err){
+					console.error("[ERROR] Unable to retrieve the current model for searching!");
+					LAUNCH_ERROR_DIALOG("Unable to retrieve the current model for searching!");
 				});
 			});
 		},
@@ -679,11 +832,11 @@ define([
 		MAIN_TREE_PATH_SET_CURRENT_USER_PATH: function(e) {
 			require(["controllers/StatesController"],function(StatesController){
 				if(e.value === "No Path") {
-					StatesController.setState(e.tag,null);
-					StatesController.setState("ON_PATH",null);
+					StatesController.setState(e.tag,null,CURRENT_TAB);
+					StatesController.setState("ON_PATH",null,CURRENT_TAB);
 				} else {
-					StatesController.setState(e.tag,e.value);
-					StatesController.setState("ON_PATH",e.tag);	
+					StatesController.setState(e.tag,e.value,CURRENT_TAB);
+					StatesController.setState("ON_PATH",e.tag,CURRENT_TAB);	
 				}
 				MAIN_TREE_PATH({key: "TREE_PATH_SET_CURRENT_USER_PATH",uri: e.item.uri, noPath: (e.value === "No Path")});
 			});
@@ -708,247 +861,222 @@ define([
 	// POP
 	//////////////////////////////////////////////////////////////
 	//
-	// Server-side "POP" actions, which are run from context menus opened
-	// by right-clicking on the GRN's elements
+	// Server-side "POP" actions, which are run from context/popup menus opened
+	// by right-clicking on the model's elements
 		
 		// POP for Network Modules
-		POP_ZOOM_TO_NET_MODULE: function(id) {
-			return function(e) {
-				e.modules = [id];
-				ZOOM_TO_MODULES(e);
-			}
+		POP_ZOOM_TO_NET_MODULE: function(e) {
+			e.modules = [dijit.getEnclosingWidget(e.target).getParent().hitObj.id];
+			ZOOM_TO_MODULES(e);
 		},
-		POP_TOGGLE_NET_MODULE_CONTENT_DISPLAY: function(id) {
-			return function(e) {
-				e.modules = [id];
-				e.reveal = "TOGGLE";
-				e.enable = "NO_CHANGE";
-				e.reveal_other = "NO_CHANGE";
-				SET_NETWORK_MODULES(e);
-			}
+		POP_TOGGLE_NET_MODULE_CONTENT_DISPLAY: function(e) {
+			e.modules = [dijit.getEnclosingWidget(e.target).getParent().hitObj.id];
+			e.reveal = "TOGGLE";
+			e.enable = "NO_CHANGE";
+			e.reveal_other = "NO_CHANGE";
+			SET_NETWORK_MODULES(e);
 		},
-		POP_SET_AS_SINGLE_CURRENT_NET_MODULE: function(id) {
-			return function(e) {
-				e.modules = [id];
-				e.reveal = "NO_CHANGE";
-				e.enable = true;
-				e.enable_other = "INVERSE";
-				SET_NETWORK_MODULES(e);
-			}
+		POP_SET_AS_SINGLE_CURRENT_NET_MODULE: function(e) {
+			e.modules = [dijit.getEnclosingWidget(e.target).getParent().hitObj.id];
+			e.reveal = "NO_CHANGE";
+			e.enable = true;
+			e.enable_other = "INVERSE";
+			SET_NETWORK_MODULES(e);
 		},
-		POP_DROP_FROM_CURRENT_NET_MODULES: function(id) {
-			return function(e) {
-				e.modules = [id];
-				e.reveal = "NO_CHANGE";
-				e.enable = false;
-				e.enable_other = "NO_CHANGE";
-				SET_NETWORK_MODULES(e);
-			}
+		POP_DROP_FROM_CURRENT_NET_MODULES: function(e) {
+			e.modules = [dijit.getEnclosingWidget(e.target).getParent().hitObj.id];
+			e.reveal = "NO_CHANGE";
+			e.enable = false;
+			e.enable_other = "NO_CHANGE";
+			SET_NETWORK_MODULES(e);
 		},
 		
 		// POP checkbox items
-		POP_SELECT_LINKS_TOGGLE: function(id) {
-			return function(e) {
-				CHECKBOX_TOGGLE("SELECT_LINKS_TOGGLE",id);
-			};
+		POP_SELECT_LINKS_TOGGLE: function(e) {
+			CHECKBOX_TOGGLE("SELECT_LINKS_TOGGLE",e);
 		},
-		POP_SELECT_QUERY_NODE_TOGGLE: function(id) {
-			return function(e) {
-				CHECKBOX_TOGGLE("SELECT_QUERY_NODE_TOGGLE",id);
-			};
+		POP_SELECT_QUERY_NODE_TOGGLE: function(e) {
+			CHECKBOX_TOGGLE("SELECT_QUERY_NODE_TOGGLE",e);
 		},
-		POP_APPEND_TO_CURRENT_SELECTION_TOGGLE: function(id) {
-			return function(e) {
-				CHECKBOX_TOGGLE("APPEND_TO_CURRENT_SELECTION_TOGGLE",id);
-				require(["controllers/StatesController"],function(StatesController){
-					StatesController.setState("POP_APPEND_TO_CURRENT_SELECTION",e);
-				});
-			};
+		POP_APPEND_TO_CURRENT_SELECTION_TOGGLE: function(e) {
+			var checkVal = dijit.getEnclosingWidget(e.target).get("checked");
+			CHECKBOX_TOGGLE("APPEND_TO_CURRENT_SELECTION_TOGGLE",e);
+			require(["controllers/StatesController"],function(StatesController){
+				StatesController.setState("POP_APPEND_TO_CURRENT_SELECTION", checkVal);
+			});
 		},
 			
 		// POP Experimental Data display actions
-		POP_DISPLAY_LINK_DATA: function(id) {
-			var uniqueId = utils.makeId();
-			return function(stepData) {
-				require(["controllers/ActionController","dijit","static/XhrUris"],function(ActionController,dijit,XhrUris){
-					var widget = dijit.getEnclosingWidget(stepData.target);
-					var link = widget ? widget.getParent().hitObj : null;
-					var linkUri = link ? XhrUris.linkIdUri(link) : "";
-					stepData.id = id;
-					stepData.linkUri = linkUri;
-					stepData.persistentArgs = ["linkUri"];
-					stepData.label = stepData.label || (link ? (link.getName() || link.label) : null) || id; 
-					stepData.name = stepData.label;
-					stepData.action = {cmdClass: "POP",cmdKey: "DISPLAY_LINK_DATA",args: {uri: linkUri},uniqueId: uniqueId};
-					stepData.postDialogStep = "SEND_DIALOG_RESULT";
-					stepData.postSuccessStep = "END";
-					stepData.onSuccess = DISPLAY_EXPERIMENTAL_DATA;
-					stepData.resultsMap = {
-						ExperimentalData: "ExperimentalData",
-						FrameTitle: "FrameTitle"
-					};
-					ActionController.runAction(stepData);
-				});
-			};	
+		POP_DISPLAY_LINK_DATA: function(stepData) {
+			require(["controllers/ActionController","static/XhrUris"],function(ActionController,XhrUris){
+				var widget = dijit.getEnclosingWidget(stepData.target);
+				var link = widget ? widget.getParent().hitObj : null;
+				var id = link ? link.id : stepData.id;
+				var linkUri = link ? XhrUris.linkIdUri(link) : "";
+				stepData.id = id;
+				stepData.linkUri = linkUri;
+				stepData.persistentArgs = ["linkUri", "id", "name"];
+				stepData.label = stepData.label || (link ? (link.getName() || link.label) : null) || id; 
+				stepData.name = stepData.label;
+				stepData.currTab = stepData.currentTab || CURRENT_TAB;
+				stepData.action = {cmdClass: "POP",cmdKey: "DISPLAY_LINK_DATA",args: {uri: linkUri},uniqueId: (widget ? widget.uniqueId : null)};
+				stepData.postDialogStep = "SEND_DIALOG_RESULT";
+				stepData.postSuccessStep = "END";
+				stepData.onSuccess = DISPLAY_EXPERIMENTAL_DATA;
+				stepData.resultsMap = {
+					ExperimentalData: "ExperimentalData",
+					FrameTitle: "FrameTitle"
+				};
+				ActionController.runAction(stepData);
+			});
 		},
-		POP_DISPLAY_DATA: function(id) {
-			var uniqueId = utils.makeId();
-			return function(stepData) {
-				require(["controllers/ActionController","dijit"],function(ActionController,dijit){
-					var widget = dijit.getEnclosingWidget(stepData.target);
-					var hit = widget ? widget.getParent().hitObj : null;
-					var name = hit ? (hit.getName() || hit.label || id) : id;
-					
-					stepData.id = id;
-					stepData.label = stepData.label || name || id; 
-					stepData.name = stepData.label;
-					stepData.action = {cmdClass: "POP",cmdKey: "DISPLAY_DATA",args: {objID: id},uniqueId: uniqueId};
-					stepData.postSuccessStep = "END";
-					stepData.onSuccess = DISPLAY_EXPERIMENTAL_DATA;
-					stepData.resultsMap = {
-						ExperimentalData: "ExperimentalData"
-					}
-					ActionController.runAction(stepData);
-				});
-			};				
+		POP_DISPLAY_DATA: function(stepData) {
+			require(["controllers/ActionController"],function(ActionController){
+				var widget = dijit.getEnclosingWidget(stepData.target);
+				var hit = widget ? widget.getParent().hitObj : null;
+				var id = hit ? hit.id : stepData.id;
+				var name = hit ? (hit.getName() || hit.label || id) : id;
+				stepData.currTab = CURRENT_TAB;
+				stepData.id = id;
+				stepData.label = stepData.label || name || id; 
+				stepData.name = stepData.label;
+				stepData.action = {cmdClass: "POP",cmdKey: "DISPLAY_DATA",args: {objID: id, clientstate:true},uniqueId: (widget ? widget.uniqueId : null)};
+				stepData.postSuccessStep = "END";
+				stepData.onSuccess = DISPLAY_EXPERIMENTAL_DATA;
+				stepData.resultsMap = {
+					ExperimentalData: "ExperimentalData"
+				}
+				ActionController.runAction(stepData);
+			});
 		},
 		
 		// POP Usage dialogs
-		POP_LINK_USAGES: function(id) {
-			var uniqueId = utils.makeId();
-			return function(stepData) {
-				require(["controllers/ActionController","dijit","static/XhrUris"],function(ActionController,dijit,XhrUris){
-					var link = dijit.getEnclosingWidget(stepData.target).getParent().hitObj;
-					var linkUri = link ? XhrUris.linkIdUri(link) : "";
-					stepData.action = {cmdClass: "POP",cmdKey: "LINK_USAGES",args: {uri: linkUri},uniqueId: uniqueId};
-					stepData.postDialogStep = "PARSE_DIALOG_RESULT";
-					stepData.postSuccessStep = "PARSE_DIALOG_RESULT";
-					stepData.onSuccess = CLIENT_GOTO_MODEL_AND_SELECT;
-					ActionController.runAction(stepData);
-				});
-			};			
+		POP_LINK_USAGES: function(stepData) {
+			require(["controllers/ActionController","static/XhrUris"],function(ActionController,XhrUris){
+				var widget = dijit.getEnclosingWidget(stepData.target);
+				var link = widget.getParent().hitObj;
+				var linkUri = link ? XhrUris.linkIdUri(link) : stepData.linkUri;
+				stepData.action = {cmdClass: "POP",cmdKey: "LINK_USAGES",args: {uri: linkUri},uniqueId: (widget ? widget.uniqueId : null)};
+				stepData.postDialogStep = "PARSE_DIALOG_RESULT";
+				stepData.linkUri = linkUri;
+				stepData.currTab = CURRENT_TAB;
+				stepData.postSuccessStep = "PARSE_DIALOG_RESULT";
+				stepData.onSuccess = CLIENT_GOTO_MODEL_AND_SELECT;
+				ActionController.runAction(stepData);
+			});
 		},
-		POP_NODE_USAGES: function(id) {
-			var uniqueId = utils.makeId();
-			return function(stepData) {
-				require(["controllers/ActionController"],function(ActionController){
-					stepData.action = {cmdClass: "POP",cmdKey: "NODE_USAGES",args: {objID: id},uniqueId: uniqueId};
-					stepData.postDialogStep = "PARSE_DIALOG_RESULT";
-					stepData.postSuccessStep = "PARSE_DIALOG_RESULT";
-					stepData.onSuccess = CLIENT_GOTO_MODEL_AND_SELECT;
-					ActionController.runAction(stepData);
-				});
-			};
+		POP_NODE_USAGES: function(stepData) {
+			require(["controllers/ActionController"],function(ActionController){
+				var widget = dijit.getEnclosingWidget(stepData.target);
+				var hit = widget ? widget.getParent().hitObj : null;
+				var id = hit ? hit.id : stepData.id;
+				stepData.action = {cmdClass: "POP",cmdKey: "NODE_USAGES",args: {objID: id},uniqueId: (widget ? widget.uniqueId : null)};
+				stepData.id = id;
+				stepData.currTab = CURRENT_TAB;
+				stepData.postDialogStep = "PARSE_DIALOG_RESULT";
+				stepData.postSuccessStep = "PARSE_DIALOG_RESULT";
+				stepData.onSuccess = CLIENT_GOTO_MODEL_AND_SELECT;
+				ActionController.runAction(stepData);
+			});
 		},	
 
 		// POP region actions
-		POP_TOGGLE: function(id) {
-			return function(e) {
-				require(["controllers/ArtboardController"],function(abController){
-					abController.getArtboardController(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).toggleRegion(id);
-				});
-			};			
+		POP_TOGGLE: function(e) {
+			require(["controllers/ArtboardController"],function(abController){
+				abController.getArtboardController(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).toggleRegion(
+					dijit.getEnclosingWidget(e.target).getParent().hitObj.id
+				);
+			});
 		},
-		POP_ZOOM_TO_GROUP: function(id) {
-			return function(e) {
-				require(["views/BioTapestryCanvas"],function(BTCanvas){
-					BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomToNode(id);
-				});
-			};			
+		POP_ZOOM_TO_GROUP: function(e) {
+			require(["views/BioTapestryCanvas"],function(BTCanvas){
+				BTCanvas.getBtCanvas(e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).zoomToNode(
+					dijit.getEnclosingWidget(e.target).getParent().hitObj.id
+				);
+			});
+		},
+		POP_GROUP_PROPERTIES: function(e) {
+			EDITOR_PASS_THROUGH(e,"POP_GROUP_PROPERTIES");
+		},
+		POP_GROUP_DELETE: function(e) {
+			EDITOR_PASS_THROUGH(e,"POP_GROUP_DELETE");
+		},
+		POP_DELETE_REGION_MAP: function(e) {
+			EDITOR_PASS_THROUGH(e,"POP_DELETE_REGION_MAP");
 		},
 		
-		POP_DELETE_NODE: function(id) {
-			return function(e) {
-				require(["controllers/EditorActions"],function(EditorActions){
-					EditorActions.POP_DELETE_NODE(id);
-				});
-			};
+		// POP Node actions
+		POP_DELETE_NODE: function(e) {
+			require(["controllers/EditorActions"],function(EditorActions){
+				EditorActions.POP_DELETE_NODE(e);
+			});
 		},		
 		
 		// POP selection actions
-		POP_SELECT_SOURCES_GENE_ONLY: function(id) {
-			return POP_SELECT(id,"SELECT_SOURCES_GENE_ONLY");
+		POP_SELECT_SOURCES_GENE_ONLY: function(e) {
+			POP_SELECT(e,"SELECT_SOURCES_GENE_ONLY");
 		},
-		POP_SELECT_TARGETS_GENE_ONLY: function(id) {
-			return POP_SELECT(id,"SELECT_TARGETS_GENE_ONLY");
+		POP_SELECT_TARGETS_GENE_ONLY: function(e) {
+			POP_SELECT(e,"SELECT_TARGETS_GENE_ONLY");
 		},		
-		POP_SELECT_SOURCES: function(id) {
-			return POP_SELECT(id,"SELECT_SOURCES");
+		POP_SELECT_SOURCES: function(e) {
+			POP_SELECT(e,"SELECT_SOURCES");
 		},
-		POP_SELECT_TARGETS: function(id) {
-			return POP_SELECT(id,"SELECT_TARGETS");
+		POP_SELECT_TARGETS: function(e) {
+			POP_SELECT(e,"SELECT_TARGETS");
 		},
-		POP_SELECT_LINK_TARGETS: function(id) {
-			return POP_SELECT(id,"SELECT_LINK_TARGETS");	
+		POP_SELECT_LINK_TARGETS: function(e) {
+			POP_SELECT(e,"SELECT_LINK_TARGETS");
 		},
-		POP_SELECT_LINK_SOURCE: function(id) {
-			return function(e) {
-				require(["dijit"],function(dijit){
-					e.newVal = [dijit.getEnclosingWidget(e.target).getParent().hitObj.srctag];
-					PARSE_AND_SEL_ZOOM(e);
-				});
-			};
+		POP_SELECT_LINK_SOURCE: function(e) {
+			e.newVal = [dijit.getEnclosingWidget(e.target).getParent().hitObj.srctag];
+			PARSE_AND_SEL_ZOOM(e);
 		},
-		POP_FULL_SELECTION: function(id) { 		// Select all the segments in a link
-			return function(e) {
-				e.newVal = [dijit.getEnclosingWidget(e.target).getParent().hitObj.id];
-				PARSE_AND_SEL_ZOOM(e);
-			};
+		POP_FULL_SELECTION: function(e) {
+			e.newVal = [dijit.getEnclosingWidget(e.target).getParent().hitObj.id];
+			PARSE_AND_SEL_ZOOM(e);
 		},
 		
 		// POP_ANALYZE_PATHS actions
-		POP_ANALYZE_PATHS_FROM_USER_SELECTED: function(id) {
-			var clickId = "popAnalyzePathsFromUserSel";
-			return function(e) {
-				require(["static/XhrUris","controllers/XhrController","app","controllers/ClickWaitController"],
-					function(XhrUris,XhrController,appMain,ClickWaitController){
-					
-					XhrController.xhrRequest(XhrUris.cmd("POP","ANALYZE_PATHS_FROM_USER_SELECTED",{objID: id})).then(function(data){
-						if(data.resultType === "WAITING_FOR_CLICK") {
-							var pathClick = function(e){
-								require(["views/BioTapestryCanvas","controllers/WindowController"],function(BTCanvas,WindowController){
-									var translatedClick = BTCanvas.translateHit({x: e.clientX, y: e.clientY},e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID);
-									translatedClick.x = Math.round(translatedClick.x);
-									translatedClick.y = Math.round(translatedClick.y);
-									ANALYZE_PATHS(
-										"ANALYZE_PATHS_FROM_USER_SELECTED"
-										,{objID: id, x: Math.round(translatedClick.x), y: Math.round(translatedClick.y)}
-										,function(resultsMap){
-											ClickWaitController.uninstallClick(clickId,resultsMap);
-										}
-									);
-								});
-							};
-							ClickWaitController.installClick({
-								clickId: clickId, 
-								callback: pathClick, 
-								canvasId: e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID,
-								type: "ACTION",
-								statesAndMasks: data.resultsMap
-							});			
-						} else {
-							console.error("[ERROR] Unexpected response from the server: "+data.resultType);
-						}
-					},function(err){
-						ClickWaitController.uninstallClick(clickId);
-						if(err.status === "NEW_SESSION") {
-							WARN_RESTART_SESSION();
-						}
-					});
-				});
-			};
+		POP_ANALYZE_PATHS_FROM_USER_SELECTED: function(stepData) {
+			var widget = dijit.getEnclosingWidget(stepData.target);
+			var hit = widget ? widget.getParent().hitObj : null;
+			var id = hit ? hit.id : stepData.id;
+			stepData.id = id;
+			stepData.clickId = "popAnalyzePathsFromUserSel";
+			ANALYZE_PATHS("ANALYZE_PATHS_FROM_USER_SELECTED",stepData,{objID: id});
 		},
-		POP_ANALYZE_PATHS: function(id) {
-			return function(e) {
-				require(["dijit","static/XhrUris"],function(dijit,XhrUris){
-					ANALYZE_PATHS("ANALYZE_PATHS",{uri: XhrUris.linkIdUri(dijit.getEnclosingWidget(e.target).getParent().hitObj)});
-				});
-			};			
+		POP_ANALYZE_PATHS_WITH_QPCR: function(stepData) {
+			require(["static/XhrUris"],function(XhrUris){
+				var widget = dijit.getEnclosingWidget(stepData.target);
+				var hit = widget ? widget.getParent().hitObj : null;
+				var id = hit ? hit.id : stepData.id;
+				stepData.id = id;
+				stepData.uri = XhrUris.linkIdUri(hit);
+				ANALYZE_PATHS("ANALYZE_PATHS_WITH_QPCR",stepData,{uri: stepData.uri});
+			});		
+		}, 
+		POP_ANALYZE_PATHS: function(stepData) {
+			require(["static/XhrUris"],function(XhrUris){
+				var widget = dijit.getEnclosingWidget(stepData.target);
+				var hit = widget ? widget.getParent().hitObj : null;
+				var id = hit ? hit.id : stepData.id;
+				stepData.id = id;
+				stepData.uri = XhrUris.linkIdUri(hit);
+				ANALYZE_PATHS("ANALYZE_PATHS",stepData,{uri: stepData.uri});
+			});		
 		},
-		POP_ANALYZE_PATHS_FOR_NODE: function(args) {
-			return function(e) {
-				ANALYZE_PATHS("ANALYZE_PATHS_FOR_NODE",{uri: args.uri, objID: args.id});
-			};
+		POP_ANALYZE_PATHS_FOR_NODE: function(stepData) {
+			var menuItem = dijit.getEnclosingWidget(stepData.target);
+			var id = menuItem ? menuItem.actionArgs.id : stepData.id;
+			var uri = menuItem ? menuItem.actionArgs.uri : stepData.uri;
+			stepData.id = id;
+			stepData.uri = id;
+			ANALYZE_PATHS("ANALYZE_PATHS_FOR_NODE",stepData,{uri: uri, objID: id});
+		},
+		
+		POP_EDIT_NOTE: function(e) {
+			EDITOR_PASS_THROUGH(e,"POP_EDIT_NOTE");
 		},
 		
 		
@@ -959,6 +1087,7 @@ define([
 	// 
 		
 		OTHER_PATH_MODEL_GENERATION: function(args) {
+			args.currentTab = CURRENT_TAB;
 			return PATH_MODEL_GENERATION(args);
 		},
 		
@@ -969,13 +1098,67 @@ define([
 	//
 	// Actions that are specific to client implementation and functionality
 		
+		//////////////////////////////////////
+		// CLIENT_KEYMAP
+		//////////////////////////////////////
+		//
+		//
+		CLIENT_KEYMAP: function(e) {
+			require(["dialogs/DialogFactory","dijit/registry"],function(DialogFactory,registry){
+				if(!registry.byId("keymap_dialog")) {
+					var keymapDialog = DialogFactory.makeKeymapDialog({clientMode: CLIENT_MODE});
+					keymapDialog.show();
+				}
+			});
+		},
+		
+		///////////////////////////////////
+		// CLIENT_SHOW_STACKPAGE
+		//////////////////////////////////
+		//
+		//
+		CLIENT_SHOW_STACKPAGE: function(e) {
+			require(["dijit/registry"],function(registry){
+				var stackContainer = registry.byId(e.containerId);
+				var stackPage = registry.byId(e.pageId);
+				
+				if(e.widgetSettings) {
+					EDIT_WIDGET_SETTINGS(e.widgetSettings);
+				}
+				
+				if(e.elementConditions) {
+					console.debug("Totally swapping out these:",e.elementConditions);
+				}
+				
+				stackContainer && stackPage && stackContainer.selectChild(stackPage);
+			});			
+		},
+
+		///////////////////////////////////
+		// CLIENT_EXPIRE actions
+		///////////////////////////////////
+		//
+		//
+		CLIENT_EXPIRE_ALL_RELOAD_CURR: function(e) {
+			EXPIRE_RELOAD("root",true,null,(e && e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID));
+		},
+		CLIENT_EXPIRE_BRANCH_RELOAD_CURR: function(e) {
+			EXPIRE_RELOAD(e.modelId,null,true,(e && e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID));
+		},
+		CLIENT_EXPIRE_KIDS_RELOAD_CURR: function(e) {
+			EXPIRE_RELOAD(e.modelId,true,false,(e && e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID));
+		},
+		CLIENT_EXPIRE_RELOAD_CURR: function(e) {
+			EXPIRE_RELOAD(e.modelId,false,false,(e && e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID));
+		},
+		
 		////////////////////////////////////////
 		// CLIENT_SET_MODEL
 		////////////////////////////////////////
 		//
 		//
 		CLIENT_SET_MODEL: function(e) {
-			return CLIENT_GOTO_MODEL({isGrnId: true, modelId: e.modelId, state: e.state});
+			return CLIENT_GOTO_MODEL({isGrnId: true, modelId: e.modelId, state: e.state, isSliderChange: e.isSliderChange});
 		},
 		
 		///////////////////////////////////
@@ -989,12 +1172,15 @@ define([
 		CLIENT_LOAD_EXP_DATA_WINDOW: function(e) {
 			require(["static/XhrUris","controllers/XhrController","controllers/expdata/ExpDataController"],
 				function(XhrUris,XhrController,BTExpDataController){
-				var args = {};
+				var args = {
+					currentTab: e.currentTab || CURRENT_TAB
+				};
 				if(e.cmdKey === "DISPLAY_LINK_DATA") {
 					args.uri = e.linkUri.replace(/%22/g,"\"");
 				} else {
 					args.objID = e.id;
 				}
+
 				XhrController.xhrRequest(XhrUris.cmd(e.cmdClass,e.cmdKey,args),{method:"POST"}).then(function(response){
 					var loadArgs = {
 						queryString: "*[id^=\"exp_data_container\"]",
@@ -1005,7 +1191,7 @@ define([
 						var ExperimentalData = resultsMap.ExperimentalData;
 						loadArgs.preFetched = !ExperimentalData.incomplete;
 						loadArgs.expData = ExperimentalData.HTML;
-						loadArgs.title = resultsMap.FrameTitle ? resultsMap.FrameTitle : "Experimntal Data for " + e.name; 
+						loadArgs.title = resultsMap.FrameTitle ? resultsMap.FrameTitle : "Experimental Data for " + e.name; 
 						loadArgs.objId = ExperimentalData.ID;
 						loadArgs.genomeKey = ExperimentalData.genomeKey;
 						loadArgs.cmdKey = ExperimentalData.flowKey;
@@ -1024,10 +1210,10 @@ define([
 							method: "POST"
 						};
 						
-						XhrController.xhrRequest(XhrUris.cmd(e.cmdClass,e.cmdKey),reqArgs).then(function(response){
+						XhrController.xhrRequest(XhrUris.cmd(e.cmdClass,e.cmdKey,{currentTab: args.currentTab || CURRENT_TAB}),reqArgs).then(function(response){
 							loadData(response.resultsMap);
 						},function(err){
-							console.err("[ERROR] "+err);
+							console.error("[ERROR] "+err.error,sg);
 						});
 					} else {
 						loadData(response.resultsMap);
@@ -1052,9 +1238,9 @@ define([
 		// Store an overlay object in the Artboard Controller (this will apply it to the current model)
 		CLIENT_SET_OVERLAY: function(e) {
 			var setAsync = new Deferred();
-			require(["controllers/ArtboardController","controllers/StatesController","dijit"],function(ArtboardController,StatesController,dijit){
-				if(!e.onPath && StatesController.getState("ON_PATH")) {
-					var pathCombo = dijit.byId(StatesController.getState("ON_PATH"));
+			require(["controllers/ArtboardController","controllers/StatesController"],function(ArtboardController,StatesController){
+				if(!e.onPath && StatesController.getState("ON_PATH",CURRENT_TAB)) {
+					var pathCombo = dijit.byId(StatesController.getState("ON_PATH",CURRENT_TAB));
 					pathCombo.set("value", "No Path");
 				}
 				ArtboardController.getArtboardController(e && e.drawingAreaId || APP_CANVAS_CONTAINER_NODE_ID).set("overlay_",e);
@@ -1074,7 +1260,8 @@ define([
 					pathDepth: e.newVal.id,
 					pathSrc: e.pathSrc,
 					pathTrg: e.pathTrg,
-					pathInit: e.pathInit ? e.pathInit : false
+					pathInit: e.pathInit ? e.pathInit : false,
+					canvasId: e.drawingAreaId
 				});
 			});
 		},
@@ -1149,10 +1336,15 @@ define([
 		CLIENT_SET_ELEMENT_CONDITION: function(e) {
 			require(["models/conditions/ElementConditions"],function(ElementConditions){
 				if(e.conditionValueLoc === "ELEMENT_VALUES") {
-					for(var i in e.values) {
-						if(e.values.hasOwnProperty(i)) {
-							ElementConditions.set(i,e.values[i]);
+					if(e.values) {
+						for(var i in e.values) {
+							if(e.values.hasOwnProperty(i)) {
+								ElementConditions.set(i,e.values[i]);
+							}
 						}
+					}
+					if(e.newVal != undefined && e.newVal != null) {
+						ElementConditions.set(e.thisElement,e.newVal);
 					}
 				}
 				if(e.conditionValueLoc === "ELEMENT_NEWVAL") {
@@ -1170,7 +1362,6 @@ define([
 				}				
 			});
 		},
-		
 		
 		////////////////////////////////
 		// CLIENT_SELECT_AND_ZOOM
@@ -1291,6 +1482,16 @@ define([
 			require(["controllers/WindowController"],function(WindowController){
 				WindowController.closeWindow(e.windowId);
 			});
+		},
+		
+		///////////////////////////////////
+		// CLIENT_LAUNCH_COLOR_EDITOR
+		////////////////////////////////////
+		//
+		// Launch the BTColorEditorDialog, which is an Editor action
+		//
+		CLIENT_LAUNCH_COLOR_EDITOR: function(e) {
+			EDITOR_PASS_THROUGH(e,"CLIENT_LAUNCH_COLOR_EDITOR");
 		}
 	};
 

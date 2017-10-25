@@ -33,11 +33,13 @@ define([
 			request(reqUri,params).response.then(function(response){
 				if(response.getHeader("content-type").indexOf("application/json") >= 0) {
 					try {
-						var parsedResponse = JSON.parse(response.data);
-						if(parsedResponse.result === "NEW_SESSION") {
-							asyncRequest.reject({status: parsedResponse.result});
-						}
-						asyncRequest.resolve(parsedResponse);
+						//setTimeout(function(){
+							var parsedResponse = JSON.parse(response.data);
+							if(parsedResponse.result === "NEW_SESSION") {
+								asyncRequest.reject({status: parsedResponse.result});
+							}
+							asyncRequest.resolve(parsedResponse);
+						//},10000);
 					} catch(e) {
 						asyncRequest.reject({status: "500", reply: e});
 						console.debug("[ERROR] In XhrRequest: " + e);
